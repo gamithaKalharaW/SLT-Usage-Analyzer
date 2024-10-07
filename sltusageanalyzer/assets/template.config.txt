@@ -1,0 +1,4 @@
+BROWSER_PATH=C:/Program Files/Google/Chrome/Application/chrome.exe
+USERNAME={{ username }}
+PASSWORD={{ password }}
+ID={{ id }}

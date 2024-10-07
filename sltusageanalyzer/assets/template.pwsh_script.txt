@@ -1,0 +1,53 @@
+$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$session.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+Invoke-WebRequest -UseBasicParsing -Uri "https://omniscapp.slt.lk/mobitelint/slt/api/Account/Login" `
+-Method "POST" `
+-WebSession $session `
+-Headers @{
+"Accept"="application/json, text/plain, */*"
+  "Accept-Encoding"="gzip, deflate, br, zstd"
+  "Accept-Language"="en-US,en;q=0.9,si-LK;q=0.8,si;q=0.7"
+  "DNT"="1"
+  "Origin"="https://myslt.slt.lk"
+  "Referer"="https://myslt.slt.lk/"
+  "Sec-Fetch-Dest"="empty"
+  "Sec-Fetch-Mode"="cors"
+  "Sec-Fetch-Site"="same-site"
+  "X-IBM-Client-Id"="41aed706-8fdf-4b1e-883e-91e44d7f379b"
+  "sec-ch-ua"="`"Not/A)Brand`";v=`"8`", `"Chromium`";v=`"126`""
+  "sec-ch-ua-mobile"="?0"
+  "sec-ch-ua-platform"="`"Windows`""
+  "sec-gpc"="1"
+} `
+-ContentType "application/x-www-form-urlencoded" `
+-Body "username={{ username }}&password={{ password }}&channelID=WEB" `
+-OutFile "login.json"
+# Save login response to login.json
+
+#INFO: Extract access token from json
+$jsonData = Get-Content "login.json" | ConvertFrom-Json
+$tokenValue = $jsonData.accessToken
+
+
+#INFO: Pass extracted token as variable
+Invoke-WebRequest -UseBasicParsing -Uri "https://omniscapp.slt.lk/mobitelint/slt/api/BBVAS/UsageSummary?subscriberID={{ subscriberID }}" `
+-WebSession $session `
+-Headers @{
+"Accept"="application/json, text/plain, */*"
+  "Accept-Encoding"="gzip, deflate, br, zstd"
+  "Accept-Language"="en-US,en;q=0.9,si-LK;q=0.8,si;q=0.7"
+  # "Authorization"="bearer _4ehXTpWYPyj8inxIVz78jXoprHqJXE17SL5hMDFtor16E12ZjLWsFk-yF42-kJJT0TeY6YE-t30na5XfYM2EDafEtNWgP9J_4BF5npqtkVuoa7KvnPatQiiFR7CPQFPZwU3iFmVuvrLvgRkmv33uhnsoM1cHytuxig26gW46XIP_05D8RDoT1EdMQkmj8av2mN_c_cI2xrxpBr0kN_kVUX2vnJZ_pUTQKJJPNLDRSuy4_t8f1Xb0yri-fMB2bCZFlVLRSXt9LHpCi9YkWBHXJVCNccmuQrzTsVCAGmZTpzn5Wvb"
+  "Authorization"="bearer $tokenValue"
+  "DNT"="1"
+  "Origin"="https://myslt.slt.lk"
+  "Referer"="https://myslt.slt.lk/"
+  "Sec-Fetch-Dest"="empty"
+  "Sec-Fetch-Mode"="cors"
+  "Sec-Fetch-Site"="same-site"
+  "X-IBM-Client-Id"="41aed706-8fdf-4b1e-883e-91e44d7f379b"
+  "sec-ch-ua"="`"Not/A)Brand`";v=`"8`", `"Chromium`";v=`"126`""
+  "sec-ch-ua-mobile"="?0"
+  "sec-ch-ua-platform"="`"Windows`""
+  "sec-gpc"="1"
+} `
+-OutFile "summary.json"

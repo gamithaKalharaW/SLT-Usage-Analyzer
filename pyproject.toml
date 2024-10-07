@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "sltusageanalyzer"
+version = "0.1.0"
+description = ""
+authors = ["gamithaKalharaW <136357643+gamithaKalharaW@users.noreply.github.com>"]
+readme = "README.md"
+include = [
+  "sltusageanalyzer/assets/*",
+  "sltusageanalyzer/static/*",
+  "sltusageanalyzer/template/*"
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+flask = "^3.0.3"
+flaskwebgui = "^1.1.6"
+waitress = "^3.0.0"
+loguru = "^0.7.2"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.scripts]
+sltanalyzer = "sltusageanalyzer.__main__:main"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

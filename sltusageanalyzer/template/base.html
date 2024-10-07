@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <title>SLT Usage Analyzer</title>
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" />
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+<body>
+
+  <script>
+
+    // Prevent F12 key
+    document.onkeydown = function (e) {
+      if (e.key === "F12") {
+        e.preventDefault();
+      }
+    };
+
+    // Close application be pressing 'q'
+    document.onkeyup = function (e) {
+      if (e.key === "q") {
+        window.location.replace("{{ url_for('close') }}");
+      }
+    };
+
+    // Prevent right-click
+    document.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+    });
+
+  </script>
+
+  <div class="root">
+      <div class="content-frame">
+        <a href="{{ url_for('total') }}", style="text-decoration: none;">
+          <div class="buttonTab">
+            <div class="text-center">
+              <p>Total</p>
+            </div>
+          </div>
+
+        <a href="{{ url_for('usage', tp='Standard') }}", style="text-decoration: none;">
+          <div class="buttonTab">
+            <div class="text-center">
+              <p>Standard</p>
+            </div>
+          </div>
+
+        <a href="{{ url_for('usage', tp='Free') }}", style="text-decoration: none;">
+          <div class="buttonTab">
+            <div class="text-center">
+              <p>Free</p>
+            </div>
+          </div>
+
+        <a href="{{ url_for('vas') }}", style="text-decoration: none;">
+          <div class="buttonTab">
+            <div class="text-center">
+              <p>VAS</p>
+            </div>
+          </div>
+
+        <a href="{{ url_for('refresh') }}", style="text-decoration: none;">
+          <div class="refresh-button">
+            <div class="text-center" id="refresh-font">
+              <p>Refresh</p>
+            </div>
+          </div>
+        </a>
+
+        <p style="text-align: center;color: white;font-size: 14px;">
+        {{ report_time }}
+        </p>
+    </div>
+    <div>
+    {% block content %}{% endblock %}
+    </div>
+  </div>
+
+</body>
+</html>
