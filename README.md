@@ -1,6 +1,7 @@
 # SLT Usage Analyzer
 ---
 A desktop webapplication for checking SLT usage build in python.
+
 ![Demo image](https://github.com/gamithaKalharaW/SLT-Usage-Analyzer/blob/master/docs/chrome_eUajhYow4o.png)
 
 ## Features
@@ -19,7 +20,7 @@ A desktop webapplication for checking SLT usage build in python.
 #### Installing via `pip`
 
 ```python
-pip install git+https://github.com/gamithaKalharaW/SLT-Usage-Analyzer/tree/readme 
+pip install git+https://github.com/gamithaKalharaW/SLT-Usage-Analyzer
 ```
 The application can be run either as a python module or as an executable script.
 
