@@ -36,7 +36,6 @@ Invoke-WebRequest -UseBasicParsing -Uri "https://omniscapp.slt.lk/mobitelint/slt
 "Accept"="application/json, text/plain, */*"
   "Accept-Encoding"="gzip, deflate, br, zstd"
   "Accept-Language"="en-US,en;q=0.9,si-LK;q=0.8,si;q=0.7"
-  # "Authorization"="bearer _4ehXTpWYPyj8inxIVz78jXoprHqJXE17SL5hMDFtor16E12ZjLWsFk-yF42-kJJT0TeY6YE-t30na5XfYM2EDafEtNWgP9J_4BF5npqtkVuoa7KvnPatQiiFR7CPQFPZwU3iFmVuvrLvgRkmv33uhnsoM1cHytuxig26gW46XIP_05D8RDoT1EdMQkmj8av2mN_c_cI2xrxpBr0kN_kVUX2vnJZ_pUTQKJJPNLDRSuy4_t8f1Xb0yri-fMB2bCZFlVLRSXt9LHpCi9YkWBHXJVCNccmuQrzTsVCAGmZTpzn5Wvb"
   "Authorization"="bearer $tokenValue"
   "DNT"="1"
   "Origin"="https://myslt.slt.lk"
