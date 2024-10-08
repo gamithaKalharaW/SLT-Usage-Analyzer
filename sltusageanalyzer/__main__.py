@@ -2,15 +2,18 @@ from flask import Flask, render_template
 from flaskwebgui import FlaskUI, close_application
 from loguru import logger
 from dotenv import dotenv_values
+import click
 
 
 from pathlib import Path
 import importlib.resources as IR
+import importlib.metadata as IM
 import os
 import sys
 import getpass
 import subprocess
 import json
+import hashlib
 
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
@@ -24,6 +27,8 @@ PROCESSED_JSON_PATH = DATA_PATH / "wifi_data.json"
 CFG_PATH = DATA_PATH / ".analyzer.config"
 SCRIPT_PATH = DATA_PATH / "analyzer_pwsh.ps1"
 LOG_PATH = DATA_PATH / "analyzer.log"
+CFG_HASH_PATH = DATA_PATH / ".analyzer.config.hash"
+SCRIPT_HASH_PATH = DATA_PATH / "analyzer_pwsh.ps1.hash"
 
 app = Flask(
     __name__,
@@ -32,11 +37,13 @@ app = Flask(
 )
 
 logger.add(LOG_PATH, level="DEBUG")
-logger.add(sys.stderr, level="INFO")
 
 
 @app.route("/")
 def home():
+    if not PROCESSED_JSON_PATH.exists():
+        logger.debug("Processed json data not found. Saving data...")
+        save_processed_data()
     return total()
 
 
@@ -57,6 +64,7 @@ def total():
     free_used, free_rem = free_dt["used"], free_dt["remaining"]
     free_rem_perc = int(round((free_rem / free_dt["limit"]) * 100))
 
+    logger.debug("Rendering total page")
     return render_template(
         "total.html",
         report_time=rpt_time,
@@ -102,6 +110,7 @@ def usage(tp="total"):
     bar_val = int(round(80 * (calc_val / 100)))
     bar_val = 100 if bar_val > 100 else bar_val
 
+    logger.debug(f"Rendering {tp.lower()} usage page")
     return render_template(
         "usage.html",
         tp=tp,
@@ -128,6 +137,7 @@ def vas():
     rem_percent = vas_dt["rem_perc"]
     rem_angle = int(round(360 * (rem_percent / 100)))
 
+    logger.debug("Rendering vas page")
     return render_template(
         "vas.html",
         report_time=rpt_time,
@@ -159,14 +169,17 @@ def flask_server(**server_kwargs):
     try:
         import waitress
 
+        logger.debug("Starting waitress server")
         waitress.serve(app, **server_kwargs)
     except Exception as e:
-        logger.error(e)
+        logger.exception(e)
+        logger.error("Running app with flask server")
         app.run(**server_kwargs)
 
 
 def setup_data_folder():
     if not DATA_PATH.exists():
+        logger.error("Data folder not found.")
         logger.info(f"Creating data folder @ {DATA_PATH}")
         DATA_PATH.mkdir()
     else:
@@ -176,19 +189,43 @@ def setup_data_folder():
         logger.error("Config file not found.")
         logger.info("Creating config file...")
 
-        username = input("Enter username: ")
-        password = getpass.getpass("Enter password: ")
-        id = input("Enter id(94xxxxxxxxx): ")
-
         CFG_PATH.touch()
         CFG_PATH.write_text(
             __format_str(
                 Path(ASSETS_PATH) / "template.config.txt",
-                username=username,
-                password=password,
-                id=id,
+                username = input("Enter username: "),
+                password = getpass.getpass("Enter password: "),
+                id = input("Enter id(94xxxxxxxxx): "),
             )
         )
+        CFG_HASH_PATH.touch()
+        CFG_HASH_PATH.write_text(
+            hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
+        )
+
+    else:
+        _saved_hash = CFG_HASH_PATH.read_text().removesuffix("\n")
+        _cfg_hash = hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
+        if _saved_hash != _cfg_hash:
+            logger.error("Config file hash mismatch.")
+            logger.info("Removing corrupt config file...")
+            CFG_PATH.unlink()
+            logger.info("Creating config file...")
+            CFG_PATH.touch()
+            CFG_PATH.write_text(
+                __format_str(
+                    Path(ASSETS_PATH) / "template.config.txt",
+                    username=input("Enter username: "),
+                    password=getpass.getpass("Enter password: "),
+                    id=input("Enter id(94xxxxxxxxx): "),
+                )
+            )
+            CFG_HASH_PATH.touch()
+            CFG_HASH_PATH.write_text(
+                hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
+            )
+        else:
+            logger.info("Config file validation successful.")
 
     if not SCRIPT_PATH.exists():
         logger.info("Creating script file...")
@@ -206,6 +243,35 @@ def setup_data_folder():
                 subscriberID=id,
             )
         )
+
+        SCRIPT_HASH_PATH.touch()
+        SCRIPT_HASH_PATH.write_text(
+            hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
+        )
+
+    else:
+        _saved_hash = SCRIPT_HASH_PATH.read_text().removesuffix("\n")
+        _cfg_hash = hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
+        if _saved_hash != _cfg_hash:
+            logger.error("Script file hash mismatch.")
+            logger.info("Removing corrupt script file...")
+            SCRIPT_PATH.unlink()
+            logger.info("Creating script file...")
+            SCRIPT_PATH.touch()
+            SCRIPT_PATH.write_text(
+                __format_str(
+                    Path(ASSETS_PATH) / "template.config.txt",
+                    username = dotenv_values(CFG_PATH)["USERNAME"],
+                    passwd = dotenv_values(CFG_PATH)["PASSWORD"],
+                    id = dotenv_values(CFG_PATH)["ID"],
+                )
+            )
+            SCRIPT_HASH_PATH.touch()
+            SCRIPT_HASH_PATH.write_text(
+                hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
+            )
+        else:
+            logger.info("Script file validation successful.")
 
 
 def get_json_data():
@@ -299,7 +365,7 @@ def __format_str(fp: str | Path, **kwargs):
         logger.error(e)
         exit(1)
     except Exception as e:
-        logger.error(e)
+        logger.exception(e)
         pass
 
     for k, v in kwargs.items():
@@ -308,9 +374,18 @@ def __format_str(fp: str | Path, **kwargs):
     return template_str
 
 
-def main():
+@click.command()
+@click.option("--debug", is_flag=True, default=False, help="Run with DEBUG log-level")
+@click.option("--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000")
+@click.version_option(IM.version("sltusageanalyzer"))
+def main(debug: bool, port: int):
+    if debug:
+        logger.remove()
+        logger.add(sys.stderr, level="DEBUG")
+    else:
+        logger.remove()
+        logger.add(sys.stderr, level="INFO")
     setup_data_folder()
-    # browser_path = Path("C:/Program Files/Google/Chrome/Application/chrome.exe")
     browser_path = Path(
         dotenv_values(DATA_PATH / ".analyzer.config")["BROWSER_PATH"]  # type: ignore
     )
@@ -323,7 +398,7 @@ def main():
             server=flask_server,  # type: ignore
             server_kwargs={
                 "app": app,
-                "port": 3000,
+                "port": port,
             },
             fullscreen=False,
             width=825,
@@ -332,12 +407,13 @@ def main():
             on_shutdown=lambda: logger.info("Shutting down..."),
         )
     else:
+        logger.debug(f"Using browser @ {browser_path}")
         UI = FlaskUI(
             app=app,
             server=flask_server,  # type: ignore
             server_kwargs={
                 "app": app,
-                "port": 3000,
+                "port": port,
             },
             fullscreen=False,
             width=825,

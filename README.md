@@ -13,7 +13,7 @@ A desktop webapplication for checking SLT usage build in python.
 ### Dependencies
  - `python` 
  - [PowerShell](https://github.com/PowerShell/PowerShell)
- - [pipx](https://github.com/pypa/pipx)
+ - [pipx](https://github.com/pypa/pipx) *optional*
 
  *SLT Usage Analyzer uses chrome browser as the default option for viewing the GUI. Other browsers can be specified in the config file.*
 
@@ -32,6 +32,34 @@ python -m sltusageanalyzer
 sltanalyzer
 ```
 
+#### Installing via `pipx`
+
+```python
+pipx install git+https://github.com/gamithaKalharaW/SLT-Usage-Analyzer
+```
+
+The application can be run as an executable script.
+
+```python
+sltanalyzer
+```
+
+#### Installing from wheel file
+ - Download the wheel file from [here](https://github.com/gamithaKalharaW/SLT-Usage-Analyzer/releases/)
+ - Run either `pip install` or `pipx install` to install the wheel file.
+
+#### Packaging from source
+You can also manualy build the wheel file & install it using `poetry`.
+
+```python
+git clone https://github.com/gamithaKalharaW/SLT-Usage-Analyzer
+cd SLT-Usage-Analyzer
+poetry build
+cd dist
+# pip or pipx
+pip install sltusageanalyzer*.whl
+```
+
 ## Configuration
 
 The configuration file is stored at `%HOMEPATH%\.sltusageanalyzer\.analyzer.config`.
@@ -40,8 +68,3 @@ The configuration file is stored at `%HOMEPATH%\.sltusageanalyzer\.analyzer.conf
  - `BROWSER_PATH`: Path to browser. Defaults to `C:\Program Files\Google\Chrome\Application\chrome.exe`
  - Auth data(`USERNAME`, `PASSWORD`, `ID`): SLT credentials.
 
-
-## TODO
- - [ ] Improve logging.
- - [ ] Add asset file validation.
- - [ ] Improve cli capabilites.

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sltusageanalyzer"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["gamithaKalharaW <136357643+gamithaKalharaW@users.noreply.github.com>"]
 readme = "README.md"
@@ -17,6 +17,7 @@ flaskwebgui = "^1.1.6"
 waitress = "^3.0.0"
 loguru = "^0.7.2"
 python-dotenv = "^1.0.1"
+click = "^8.1.7"
 
 [tool.poetry.scripts]
 sltanalyzer = "sltusageanalyzer.__main__:main"
