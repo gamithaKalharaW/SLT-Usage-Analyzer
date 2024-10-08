@@ -68,3 +68,8 @@ The configuration file is stored at `%HOMEPATH%\.sltusageanalyzer\.analyzer.conf
  - `BROWSER_PATH`: Path to browser. Defaults to `C:\Program Files\Google\Chrome\Application\chrome.exe`
  - Auth data(`USERNAME`, `PASSWORD`, `ID`): SLT credentials.
 
+
+## Todo
+
+ - [ ] Add cli option to update config file.
+ - [ ] Update config.hash based on users custamizations.
