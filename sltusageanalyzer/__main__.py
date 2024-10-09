@@ -36,8 +36,6 @@ app = Flask(
     static_folder=f'{IR.files("sltusageanalyzer")}/static',
 )
 
-logger.add(LOG_PATH, level="DEBUG")
-
 
 @app.route("/")
 def home():
@@ -193,9 +191,9 @@ def setup_data_folder():
         CFG_PATH.write_text(
             __format_str(
                 Path(ASSETS_PATH) / "template.config.txt",
-                username = input("Enter username: "),
-                password = getpass.getpass("Enter password: "),
-                id = input("Enter id(94xxxxxxxxx): "),
+                username=input("Enter username: "),
+                password=getpass.getpass("Enter password: "),
+                id=input("Enter id(94xxxxxxxxx): "),
             )
         )
         CFG_HASH_PATH.touch()
@@ -208,6 +206,12 @@ def setup_data_folder():
         _cfg_hash = hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
         if _saved_hash != _cfg_hash:
             logger.error("Config file hash mismatch.")
+            if (
+                input("Would you like to reset config file?(y/n): ").lower()
+                != "y"
+            ):
+                logger.info("Exiting...")
+                exit(0)
             logger.info("Removing corrupt config file...")
             CFG_PATH.unlink()
             logger.info("Creating config file...")
@@ -254,6 +258,12 @@ def setup_data_folder():
         _cfg_hash = hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
         if _saved_hash != _cfg_hash:
             logger.error("Script file hash mismatch.")
+            if (
+                input("Would you like to reset script file?(y/n): ").lower()
+                != "y"
+            ):
+                logger.info("Exiting...")
+                exit(0)
             logger.info("Removing corrupt script file...")
             SCRIPT_PATH.unlink()
             logger.info("Creating script file...")
@@ -261,9 +271,9 @@ def setup_data_folder():
             SCRIPT_PATH.write_text(
                 __format_str(
                     Path(ASSETS_PATH) / "template.config.txt",
-                    username = dotenv_values(CFG_PATH)["USERNAME"],
-                    passwd = dotenv_values(CFG_PATH)["PASSWORD"],
-                    id = dotenv_values(CFG_PATH)["ID"],
+                    username=dotenv_values(CFG_PATH)["USERNAME"],
+                    passwd=dotenv_values(CFG_PATH)["PASSWORD"],
+                    id=dotenv_values(CFG_PATH)["ID"],
                 )
             )
             SCRIPT_HASH_PATH.touch()
@@ -354,6 +364,12 @@ def get_saved_data():
         return json.load(f)
 
 
+def check_health():
+    click.echo(click.style("Under development", fg="red"))
+
+    return 404
+
+
 def __format_str(fp: str | Path, **kwargs):
     template_str: str = ""
     if isinstance(fp, str):
@@ -375,16 +391,25 @@ def __format_str(fp: str | Path, **kwargs):
 
 
 @click.command()
-@click.option("--debug", is_flag=True, default=False, help="Run with DEBUG log-level")
-@click.option("--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000")
+@click.option(
+    "--debug", is_flag=True, default=False, help="Run with DEBUG log-level"
+)
+@click.option(
+    "--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000"
+)
+@click.option("--checkhealth", "-ch", is_flag=True, default=False, help="Check application health")
 @click.version_option(IM.version("sltusageanalyzer"))
-def main(debug: bool, port: int):
+def main(debug: bool, port: int, checkhealth: bool):
+    logger.remove()
+    logger.add(LOG_PATH, level="DEBUG")
     if debug:
-        logger.remove()
         logger.add(sys.stderr, level="DEBUG")
     else:
-        logger.remove()
         logger.add(sys.stderr, level="INFO")
+    
+    if checkhealth:
+        exit( check_health() )
+
     setup_data_folder()
     browser_path = Path(
         dotenv_values(DATA_PATH / ".analyzer.config")["BROWSER_PATH"]  # type: ignore
