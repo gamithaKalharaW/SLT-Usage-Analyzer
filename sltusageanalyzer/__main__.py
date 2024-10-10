@@ -14,6 +14,7 @@ import getpass
 import subprocess
 import json
 import hashlib
+import requests
 
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
@@ -365,9 +366,63 @@ def get_saved_data():
 
 
 def check_health():
-    click.echo(click.style("Under development", fg="red"))
+    return_code =  0
 
-    return 404
+    if not CFG_PATH.exists():
+        logger.error("Configuration file missing.")
+        return_code += 1
+    else:
+        logger.info("Configuration file found.")
+        logger.debug(f"File attrs: { CFG_PATH.stat() }")
+
+        if __compare_file_hash(CFG_PATH, CFG_HASH_PATH):
+            logger.info("Configuration file hash verified.")
+        else:
+            logger.error("Configuration file hash mismatch.")
+            return_code += 1
+
+    if not SCRIPT_PATH.exists():
+        logger.error("Script file missing.")
+        return_code += 1
+    else:
+        logger.info("Script file found.")
+        logger.debug(f"File attrs: { SCRIPT_PATH.stat() }")
+
+        if __compare_file_hash(SCRIPT_PATH, SCRIPT_HASH_PATH):
+            logger.info("Script file hash verified.")
+        else:
+            logger.error("Script file hash mismatch.")
+            return_code += 1
+
+    try:
+        response = requests.get("https://www.google.com", timeout=5)
+        if response.status_code == 200:
+            logger.info("Internet connection verified.")
+        else:
+            logger.error(f"Received unexpected status code: { response.status_code }")
+            return_code += 1
+
+    except requests.ConnectionError:
+        logger.error("No internet connection.")
+        return_code += 1
+
+    except requests.Timeout:
+        logger.error("The request timed out.")
+        return_code += 1
+
+    except Exception as e:
+        logger.error("Unexpected error")
+        logger.exception(e)
+        return_code += 1
+
+
+    return return_code
+
+
+def __compare_file_hash(filepath:Path, hashpath:Path):
+    target_hash = hashpath.read_text().removesuffix("\n")
+    current_hash = hashlib.sha256(filepath.read_bytes()).hexdigest()
+    return target_hash == current_hash
 
 
 def __format_str(fp: str | Path, **kwargs):
