@@ -365,6 +365,24 @@ def get_saved_data():
         return json.load(f)
 
 
+def update_config_file():
+    config_vals = dotenv_values(CFG_PATH)
+    for k, v in config_vals.items():
+        config_vals[k] = input(f"{k} ({v}): ") or v
+
+    CFG_PATH.unlink()
+    CFG_HASH_PATH.unlink()
+
+    CFG_PATH.touch()
+    CFG_HASH_PATH.touch()
+
+    wrt_str = "\n".join([f"{k}={v}" for k, v in config_vals.items()])
+
+    CFG_HASH_PATH.write_text(
+        hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
+    )
+
+
 def check_health():
     return_code =  0
 
@@ -453,10 +471,11 @@ def __format_str(fp: str | Path, **kwargs):
     "--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000"
 )
 @click.option("--checkhealth", "-ch", is_flag=True, default=False, help="Check application health")
+@click.option("--update-config", "-uc", is_flag=True, default=False, help="Update config file")
 @click.version_option(IM.version("sltusageanalyzer"))
-def main(debug: bool, port: int, checkhealth: bool):
+def main(debug: bool, port: int, checkhealth: bool, update_config: bool):
     logger.remove()
-    logger.add(LOG_PATH, level="DEBUG")
+    logger.add(LOG_PATH, level="DEBUG", retention="3 days")
     if debug:
         logger.add(sys.stderr, level="DEBUG")
     else:
@@ -464,6 +483,16 @@ def main(debug: bool, port: int, checkhealth: bool):
     
     if checkhealth:
         exit( check_health() )
+
+    if update_config:
+        logger.info("Updating config file...")
+        try:
+            update_config_file()
+            logger.info("Config file updated.")
+            exit(0)
+        except Exception as e:
+            logger.exception(e)
+            exit(-1)
 
     setup_data_folder()
     browser_path = Path(
