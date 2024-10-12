@@ -1,5 +1,5 @@
 # SLT Usage Analyzer
----
+
 A desktop webapplication for checking SLT usage build in python.
 
 ![Demo image](https://github.com/gamithaKalharaW/SLT-Usage-Analyzer/blob/master/docs/chrome_eUajhYow4o.png)
@@ -8,6 +8,7 @@ A desktop webapplication for checking SLT usage build in python.
  - Automatic login and extraction of usage data.
  - Descriptive graphical representation of retrieved data.
  - Consise logging through [ loguru ](https://github.com/Delgan/loguru) package.
+ - Easily update config through the cli(`--update-config`).
 
 ## Getting Started
 ### Dependencies
@@ -67,9 +68,3 @@ The configuration file is stored at `%HOMEPATH%\.sltusageanalyzer\.analyzer.conf
 ### Options
  - `BROWSER_PATH`: Path to browser. Defaults to `C:\Program Files\Google\Chrome\Application\chrome.exe`
  - Auth data(`USERNAME`, `PASSWORD`, `ID`): SLT credentials.
-
-
-## Todo
-
- - [ ] Add cli option to update config file.
- - [ ] Update config.hash based on users custamizations.

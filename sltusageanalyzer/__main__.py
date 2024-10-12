@@ -14,6 +14,7 @@ import getpass
 import subprocess
 import json
 import hashlib
+import requests
 
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
@@ -35,8 +36,6 @@ app = Flask(
     template_folder=f'{ IR.files("sltusageanalyzer") }/template',
     static_folder=f'{IR.files("sltusageanalyzer")}/static',
 )
-
-logger.add(LOG_PATH, level="DEBUG")
 
 
 @app.route("/")
@@ -193,9 +192,9 @@ def setup_data_folder():
         CFG_PATH.write_text(
             __format_str(
                 Path(ASSETS_PATH) / "template.config.txt",
-                username = input("Enter username: "),
-                password = getpass.getpass("Enter password: "),
-                id = input("Enter id(94xxxxxxxxx): "),
+                username=input("Enter username: "),
+                password=getpass.getpass("Enter password: "),
+                id=input("Enter id(94xxxxxxxxx): "),
             )
         )
         CFG_HASH_PATH.touch()
@@ -208,6 +207,12 @@ def setup_data_folder():
         _cfg_hash = hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
         if _saved_hash != _cfg_hash:
             logger.error("Config file hash mismatch.")
+            if (
+                input("Would you like to reset config file?(y/n): ").lower()
+                != "y"
+            ):
+                logger.info("Exiting...")
+                exit(0)
             logger.info("Removing corrupt config file...")
             CFG_PATH.unlink()
             logger.info("Creating config file...")
@@ -254,6 +259,12 @@ def setup_data_folder():
         _cfg_hash = hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
         if _saved_hash != _cfg_hash:
             logger.error("Script file hash mismatch.")
+            if (
+                input("Would you like to reset script file?(y/n): ").lower()
+                != "y"
+            ):
+                logger.info("Exiting...")
+                exit(0)
             logger.info("Removing corrupt script file...")
             SCRIPT_PATH.unlink()
             logger.info("Creating script file...")
@@ -261,9 +272,9 @@ def setup_data_folder():
             SCRIPT_PATH.write_text(
                 __format_str(
                     Path(ASSETS_PATH) / "template.config.txt",
-                    username = dotenv_values(CFG_PATH)["USERNAME"],
-                    passwd = dotenv_values(CFG_PATH)["PASSWORD"],
-                    id = dotenv_values(CFG_PATH)["ID"],
+                    username=dotenv_values(CFG_PATH)["USERNAME"],
+                    passwd=dotenv_values(CFG_PATH)["PASSWORD"],
+                    id=dotenv_values(CFG_PATH)["ID"],
                 )
             )
             SCRIPT_HASH_PATH.touch()
@@ -354,6 +365,84 @@ def get_saved_data():
         return json.load(f)
 
 
+def update_config_file():
+    config_vals = dotenv_values(CFG_PATH)
+    for k, v in config_vals.items():
+        config_vals[k] = input(f"{k} ({v}): ") or v
+
+    CFG_PATH.unlink()
+    CFG_HASH_PATH.unlink()
+
+    CFG_PATH.touch()
+    CFG_HASH_PATH.touch()
+
+    wrt_str = "\n".join([f"{k}={v}" for k, v in config_vals.items()])
+
+    CFG_HASH_PATH.write_text(
+        hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
+    )
+
+
+def check_health():
+    return_code =  0
+
+    if not CFG_PATH.exists():
+        logger.error("Configuration file missing.")
+        return_code += 1
+    else:
+        logger.info("Configuration file found.")
+        logger.debug(f"File attrs: { CFG_PATH.stat() }")
+
+        if __compare_file_hash(CFG_PATH, CFG_HASH_PATH):
+            logger.info("Configuration file hash verified.")
+        else:
+            logger.error("Configuration file hash mismatch.")
+            return_code += 1
+
+    if not SCRIPT_PATH.exists():
+        logger.error("Script file missing.")
+        return_code += 1
+    else:
+        logger.info("Script file found.")
+        logger.debug(f"File attrs: { SCRIPT_PATH.stat() }")
+
+        if __compare_file_hash(SCRIPT_PATH, SCRIPT_HASH_PATH):
+            logger.info("Script file hash verified.")
+        else:
+            logger.error("Script file hash mismatch.")
+            return_code += 1
+
+    try:
+        response = requests.get("https://www.google.com", timeout=5)
+        if response.status_code == 200:
+            logger.info("Internet connection verified.")
+        else:
+            logger.error(f"Received unexpected status code: { response.status_code }")
+            return_code += 1
+
+    except requests.ConnectionError:
+        logger.error("No internet connection.")
+        return_code += 1
+
+    except requests.Timeout:
+        logger.error("The request timed out.")
+        return_code += 1
+
+    except Exception as e:
+        logger.error("Unexpected error")
+        logger.exception(e)
+        return_code += 1
+
+
+    return return_code
+
+
+def __compare_file_hash(filepath:Path, hashpath:Path):
+    target_hash = hashpath.read_text().removesuffix("\n")
+    current_hash = hashlib.sha256(filepath.read_bytes()).hexdigest()
+    return target_hash == current_hash
+
+
 def __format_str(fp: str | Path, **kwargs):
     template_str: str = ""
     if isinstance(fp, str):
@@ -375,16 +464,36 @@ def __format_str(fp: str | Path, **kwargs):
 
 
 @click.command()
-@click.option("--debug", is_flag=True, default=False, help="Run with DEBUG log-level")
-@click.option("--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000")
+@click.option(
+    "--debug", is_flag=True, default=False, help="Run with DEBUG log-level"
+)
+@click.option(
+    "--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000"
+)
+@click.option("--checkhealth", "-ch", is_flag=True, default=False, help="Check application health")
+@click.option("--update-config", "-uc", is_flag=True, default=False, help="Update config file")
 @click.version_option(IM.version("sltusageanalyzer"))
-def main(debug: bool, port: int):
+def main(debug: bool, port: int, checkhealth: bool, update_config: bool):
+    logger.remove()
+    logger.add(LOG_PATH, level="DEBUG", retention="3 days")
     if debug:
-        logger.remove()
         logger.add(sys.stderr, level="DEBUG")
     else:
-        logger.remove()
         logger.add(sys.stderr, level="INFO")
+    
+    if checkhealth:
+        exit( check_health() )
+
+    if update_config:
+        logger.info("Updating config file...")
+        try:
+            update_config_file()
+            logger.info("Config file updated.")
+            exit(0)
+        except Exception as e:
+            logger.exception(e)
+            exit(-1)
+
     setup_data_folder()
     browser_path = Path(
         dotenv_values(DATA_PATH / ".analyzer.config")["BROWSER_PATH"]  # type: ignore
