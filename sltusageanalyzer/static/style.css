@@ -137,14 +137,6 @@ table {
   grid-template-columns: 1fr 1fr; 
 }
 
-#total-stand {
-  /* background: linear-gradient(90deg, #3CCD6A 14%, #3077B4 0%); */
-}
-
-#total-free {
-  /* background: linear-gradient(90deg, #3CCD6A 30%, #3077B4 0%); */
-}
-
 .progress-container {
   display: flex; 
   align-items: center;
