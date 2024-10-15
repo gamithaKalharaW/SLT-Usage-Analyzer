@@ -14,7 +14,10 @@ import getpass
 import subprocess
 import json
 import hashlib
-import requests
+
+
+from sltusageanalyzer.utils import format_str
+from sltusageanalyzer.checkhealth import check_health
 
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
@@ -190,7 +193,7 @@ def setup_data_folder():
 
         CFG_PATH.touch()
         CFG_PATH.write_text(
-            __format_str(
+            format_str(
                 Path(ASSETS_PATH) / "template.config.txt",
                 username=input("Enter username: "),
                 password=getpass.getpass("Enter password: "),
@@ -218,7 +221,7 @@ def setup_data_folder():
             logger.info("Creating config file...")
             CFG_PATH.touch()
             CFG_PATH.write_text(
-                __format_str(
+                format_str(
                     Path(ASSETS_PATH) / "template.config.txt",
                     username=input("Enter username: "),
                     password=getpass.getpass("Enter password: "),
@@ -241,7 +244,7 @@ def setup_data_folder():
         id = dotenv_values(CFG_PATH)["ID"]
 
         SCRIPT_PATH.write_text(
-            __format_str(
+            format_str(
                 Path(ASSETS_PATH) / "template.pwsh_script.txt",
                 username=username,
                 password=passwd,
@@ -270,7 +273,7 @@ def setup_data_folder():
             logger.info("Creating script file...")
             SCRIPT_PATH.touch()
             SCRIPT_PATH.write_text(
-                __format_str(
+                format_str(
                     Path(ASSETS_PATH) / "template.config.txt",
                     username=dotenv_values(CFG_PATH)["USERNAME"],
                     passwd=dotenv_values(CFG_PATH)["PASSWORD"],
@@ -389,86 +392,6 @@ def update_config_file():
     logger.info("Config file updated.")
 
 
-def check_health():
-    return_code =  0
-
-    if not CFG_PATH.exists():
-        logger.error("Configuration file missing.")
-        return_code += 1
-    else:
-        logger.info("Configuration file found.")
-        logger.debug(f"File attrs: { CFG_PATH.stat() }")
-
-        if __compare_file_hash(CFG_PATH, CFG_HASH_PATH):
-            logger.info("Configuration file hash verified.")
-        else:
-            logger.error("Configuration file hash mismatch.")
-            return_code += 1
-
-    if not SCRIPT_PATH.exists():
-        logger.error("Script file missing.")
-        return_code += 1
-    else:
-        logger.info("Script file found.")
-        logger.debug(f"File attrs: { SCRIPT_PATH.stat() }")
-
-        if __compare_file_hash(SCRIPT_PATH, SCRIPT_HASH_PATH):
-            logger.info("Script file hash verified.")
-        else:
-            logger.error("Script file hash mismatch.")
-            return_code += 1
-
-    try:
-        response = requests.get("https://www.google.com", timeout=5)
-        if response.status_code == 200:
-            logger.info("Internet connection verified.")
-        else:
-            logger.error(f"Received unexpected status code: { response.status_code }")
-            return_code += 1
-
-    except requests.ConnectionError:
-        logger.error("No internet connection.")
-        return_code += 1
-
-    except requests.Timeout:
-        logger.error("The request timed out.")
-        return_code += 1
-
-    except Exception as e:
-        logger.error("Unexpected error")
-        logger.exception(e)
-        return_code += 1
-
-
-    return return_code
-
-
-def __compare_file_hash(filepath:Path, hashpath:Path):
-    target_hash = hashpath.read_text().removesuffix("\n")
-    current_hash = hashlib.sha256(filepath.read_bytes()).hexdigest()
-    return target_hash == current_hash
-
-
-def __format_str(fp: str | Path, **kwargs):
-    template_str: str = ""
-    if isinstance(fp, str):
-        fp = Path(fp)
-    try:
-        template_str = Path(fp).read_text()
-
-    except FileNotFoundError as e:
-        logger.error(e)
-        exit(1)
-    except Exception as e:
-        logger.exception(e)
-        pass
-
-    for k, v in kwargs.items():
-        template_str = template_str.replace(f"{{{{ {k} }}}}", str(v))
-
-    return template_str
-
-
 @click.command()
 @click.option(
     "--debug", is_flag=True, default=False, help="Run with DEBUG log-level"
@@ -489,7 +412,12 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload:
         logger.add(sys.stderr, level="INFO")
     
     if checkhealth:
-        exit( check_health() )
+        exit(check_health(
+            cfg_path=CFG_PATH,
+            cfg_hash_path=CFG_HASH_PATH,
+            script_path=SCRIPT_PATH,
+            script_hash_path=SCRIPT_HASH_PATH
+        ))
 
     if update_config:
         logger.info("Updating config file...")
