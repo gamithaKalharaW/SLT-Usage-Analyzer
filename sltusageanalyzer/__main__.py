@@ -18,6 +18,7 @@ import hashlib
 
 from sltusageanalyzer.utils import format_str
 from sltusageanalyzer.checkhealth import check_health
+from sltusageanalyzer.appserver import server_func
 
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
@@ -82,7 +83,7 @@ def total():
 
 
 @app.route("/usage/<tp>")
-def usage(tp="total"):
+def usage(tp):
     json_data = get_saved_data()
     rpt_time = json_data["report_time"]
 
@@ -162,21 +163,6 @@ def refresh():
 def close():
     logger.debug("App closed by keymap")
     close_application()
-
-
-def flask_server(**server_kwargs):
-    app = server_kwargs.pop("app", None)
-    server_kwargs.pop("debug", None)
-
-    try:
-        import waitress
-
-        logger.debug("Starting waitress server")
-        waitress.serve(app, **server_kwargs)
-    except Exception as e:
-        logger.exception(e)
-        logger.error("Running app with flask server")
-        app.run(**server_kwargs)
 
 
 def setup_data_folder():
@@ -443,7 +429,7 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload:
         )
         UI = FlaskUI(
             app=app,
-            server=flask_server,  # type: ignore
+            server=server_func,  # type: ignore
             server_kwargs={
                 "app": app,
                 "port": port,
@@ -458,7 +444,7 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload:
         logger.debug(f"Using browser @ {browser_path}")
         UI = FlaskUI(
             app=app,
-            server=flask_server,  # type: ignore
+            server=server_func,  # type: ignore
             server_kwargs={
                 "app": app,
                 "port": port,
