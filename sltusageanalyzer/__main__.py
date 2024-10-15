@@ -372,15 +372,21 @@ def update_config_file():
 
     CFG_PATH.unlink()
     CFG_HASH_PATH.unlink()
+    logger.debug("Removing old files")
 
     CFG_PATH.touch()
     CFG_HASH_PATH.touch()
+    logger.debug("Creating new files")
 
     wrt_str = "\n".join([f"{k}={v}" for k, v in config_vals.items()])
 
+    CFG_PATH.write_text(wrt_str)
+    logger.debug("Writing new values to config file")
     CFG_HASH_PATH.write_text(
         hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
     )
+    logger.debug("Writing new hash to config hash file")
+    logger.info("Config file updated.")
 
 
 def check_health():
@@ -472,8 +478,9 @@ def __format_str(fp: str | Path, **kwargs):
 )
 @click.option("--checkhealth", "-ch", is_flag=True, default=False, help="Check application health")
 @click.option("--update-config", "-uc", is_flag=True, default=False, help="Update config file")
+@click.option("--reload", "-r", is_flag=True, default=False, help="Fetch new data before app startup")
 @click.version_option(IM.version("sltusageanalyzer"))
-def main(debug: bool, port: int, checkhealth: bool, update_config: bool):
+def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload: bool):
     logger.remove()
     logger.add(LOG_PATH, level="DEBUG", retention="3 days")
     if debug:
@@ -493,6 +500,10 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool):
         except Exception as e:
             logger.exception(e)
             exit(-1)
+
+    if reload:
+        logger.info("Reloading data...")
+        save_processed_data()
 
     setup_data_folder()
     browser_path = Path(
