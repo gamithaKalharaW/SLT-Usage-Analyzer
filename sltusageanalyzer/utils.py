@@ -1,9 +1,15 @@
 from pathlib import Path
 import hashlib
 import getpass
+import json
 
 from loguru import logger
 from dotenv import dotenv_values
+
+
+def get_saved_data(processed_json_path):
+    with open(processed_json_path, "r") as f:
+        return json.load(f)
 
 
 def format_str(fp: str | Path, **kwargs):

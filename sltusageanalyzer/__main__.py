@@ -15,7 +15,7 @@ import json
 import hashlib
 
 
-from sltusageanalyzer.utils import setup_data_folder
+from sltusageanalyzer.utils import setup_data_folder, get_saved_data
 from sltusageanalyzer.checkhealth import check_health
 from sltusageanalyzer.appserver import server_func
 
@@ -51,7 +51,7 @@ def home():
 
 @app.route("/total")
 def total():
-    json_data = get_saved_data()
+    json_data = get_saved_data(processed_json_path=PROCESSED_JSON_PATH)
     rpt_time = json_data["report_time"]
     total_dt = json_data["total"]
     std_dt = json_data["standard"]
@@ -83,7 +83,7 @@ def total():
 
 @app.route("/usage/<tp>")
 def usage(tp):
-    json_data = get_saved_data()
+    json_data = get_saved_data(processed_json_path=PROCESSED_JSON_PATH)
     rpt_time = json_data["report_time"]
 
     date_str = rpt_time.split(" ")[0]
@@ -131,7 +131,7 @@ def usage(tp):
 
 @app.route("/vas")
 def vas():
-    json_data = get_saved_data()
+    json_data = get_saved_data(processed_json_path=PROCESSED_JSON_PATH)
     rpt_time = json_data["report_time"]
     vas_dt = json_data["vas"]
     used = vas_dt["used"]
@@ -237,11 +237,6 @@ def save_processed_data():
     with open(PROCESSED_JSON_PATH, "w") as jf:
         json.dump(out_data, jf)
         logger.debug(f"Saving processed json data @ {PROCESSED_JSON_PATH}")
-
-
-def get_saved_data():
-    with open(PROCESSED_JSON_PATH, "r") as f:
-        return json.load(f)
 
 
 def update_config_file():
