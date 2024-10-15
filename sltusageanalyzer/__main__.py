@@ -10,13 +10,12 @@ import importlib.resources as IR
 import importlib.metadata as IM
 import os
 import sys
-import getpass
 import subprocess
 import json
 import hashlib
 
 
-from sltusageanalyzer.utils import format_str
+from sltusageanalyzer.utils import setup_data_folder
 from sltusageanalyzer.checkhealth import check_health
 from sltusageanalyzer.appserver import server_func
 
@@ -165,115 +164,6 @@ def close():
     close_application()
 
 
-def setup_data_folder():
-    if not DATA_PATH.exists():
-        logger.error("Data folder not found.")
-        logger.info(f"Creating data folder @ {DATA_PATH}")
-        DATA_PATH.mkdir()
-    else:
-        logger.info(f"Data folder found @ {DATA_PATH}")
-
-    if not CFG_PATH.exists():
-        logger.error("Config file not found.")
-        logger.info("Creating config file...")
-
-        CFG_PATH.touch()
-        CFG_PATH.write_text(
-            format_str(
-                Path(ASSETS_PATH) / "template.config.txt",
-                username=input("Enter username: "),
-                password=getpass.getpass("Enter password: "),
-                id=input("Enter id(94xxxxxxxxx): "),
-            )
-        )
-        CFG_HASH_PATH.touch()
-        CFG_HASH_PATH.write_text(
-            hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-        )
-
-    else:
-        _saved_hash = CFG_HASH_PATH.read_text().removesuffix("\n")
-        _cfg_hash = hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-        if _saved_hash != _cfg_hash:
-            logger.error("Config file hash mismatch.")
-            if (
-                input("Would you like to reset config file?(y/n): ").lower()
-                != "y"
-            ):
-                logger.info("Exiting...")
-                exit(0)
-            logger.info("Removing corrupt config file...")
-            CFG_PATH.unlink()
-            logger.info("Creating config file...")
-            CFG_PATH.touch()
-            CFG_PATH.write_text(
-                format_str(
-                    Path(ASSETS_PATH) / "template.config.txt",
-                    username=input("Enter username: "),
-                    password=getpass.getpass("Enter password: "),
-                    id=input("Enter id(94xxxxxxxxx): "),
-                )
-            )
-            CFG_HASH_PATH.touch()
-            CFG_HASH_PATH.write_text(
-                hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-            )
-        else:
-            logger.info("Config file validation successful.")
-
-    if not SCRIPT_PATH.exists():
-        logger.info("Creating script file...")
-        SCRIPT_PATH.touch()
-
-        username = dotenv_values(CFG_PATH)["USERNAME"]
-        passwd = dotenv_values(CFG_PATH)["PASSWORD"]
-        id = dotenv_values(CFG_PATH)["ID"]
-
-        SCRIPT_PATH.write_text(
-            format_str(
-                Path(ASSETS_PATH) / "template.pwsh_script.txt",
-                username=username,
-                password=passwd,
-                subscriberID=id,
-            )
-        )
-
-        SCRIPT_HASH_PATH.touch()
-        SCRIPT_HASH_PATH.write_text(
-            hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
-        )
-
-    else:
-        _saved_hash = SCRIPT_HASH_PATH.read_text().removesuffix("\n")
-        _cfg_hash = hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
-        if _saved_hash != _cfg_hash:
-            logger.error("Script file hash mismatch.")
-            if (
-                input("Would you like to reset script file?(y/n): ").lower()
-                != "y"
-            ):
-                logger.info("Exiting...")
-                exit(0)
-            logger.info("Removing corrupt script file...")
-            SCRIPT_PATH.unlink()
-            logger.info("Creating script file...")
-            SCRIPT_PATH.touch()
-            SCRIPT_PATH.write_text(
-                format_str(
-                    Path(ASSETS_PATH) / "template.config.txt",
-                    username=dotenv_values(CFG_PATH)["USERNAME"],
-                    passwd=dotenv_values(CFG_PATH)["PASSWORD"],
-                    id=dotenv_values(CFG_PATH)["ID"],
-                )
-            )
-            SCRIPT_HASH_PATH.touch()
-            SCRIPT_HASH_PATH.write_text(
-                hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
-            )
-        else:
-            logger.info("Script file validation successful.")
-
-
 def get_json_data():
     logger.debug("Started data fetching.")
     _ = subprocess.run(
@@ -371,9 +261,7 @@ def update_config_file():
 
     CFG_PATH.write_text(wrt_str)
     logger.debug("Writing new values to config file")
-    CFG_HASH_PATH.write_text(
-        hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-    )
+    CFG_HASH_PATH.write_text(hashlib.sha256(CFG_PATH.read_bytes()).hexdigest())
     logger.debug("Writing new hash to config hash file")
     logger.info("Config file updated.")
 
@@ -385,25 +273,47 @@ def update_config_file():
 @click.option(
     "--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000"
 )
-@click.option("--checkhealth", "-ch", is_flag=True, default=False, help="Check application health")
-@click.option("--update-config", "-uc", is_flag=True, default=False, help="Update config file")
-@click.option("--reload", "-r", is_flag=True, default=False, help="Fetch new data before app startup")
+@click.option(
+    "--checkhealth",
+    "-ch",
+    is_flag=True,
+    default=False,
+    help="Check application health",
+)
+@click.option(
+    "--update-config",
+    "-uc",
+    is_flag=True,
+    default=False,
+    help="Update config file",
+)
+@click.option(
+    "--reload",
+    "-r",
+    is_flag=True,
+    default=False,
+    help="Fetch new data before app startup",
+)
 @click.version_option(IM.version("sltusageanalyzer"))
-def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload: bool):
+def main(
+    debug: bool, port: int, checkhealth: bool, update_config: bool, reload: bool
+):
     logger.remove()
     logger.add(LOG_PATH, level="DEBUG", retention="3 days")
     if debug:
         logger.add(sys.stderr, level="DEBUG")
     else:
         logger.add(sys.stderr, level="INFO")
-    
+
     if checkhealth:
-        exit(check_health(
-            cfg_path=CFG_PATH,
-            cfg_hash_path=CFG_HASH_PATH,
-            script_path=SCRIPT_PATH,
-            script_hash_path=SCRIPT_HASH_PATH
-        ))
+        exit(
+            check_health(
+                cfg_path=CFG_PATH,
+                cfg_hash_path=CFG_HASH_PATH,
+                script_path=SCRIPT_PATH,
+                script_hash_path=SCRIPT_HASH_PATH,
+            )
+        )
 
     if update_config:
         logger.info("Updating config file...")
@@ -419,7 +329,14 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload:
         logger.info("Reloading data...")
         save_processed_data()
 
-    setup_data_folder()
+    setup_data_folder(
+        data_path=DATA_PATH,
+        cfg_path=CFG_PATH,
+        cfg_hash_path=CFG_HASH_PATH,
+        assets_path=ASSETS_PATH,
+        script_path=SCRIPT_PATH,
+        script_hash_path=SCRIPT_HASH_PATH,
+    )
     browser_path = Path(
         dotenv_values(DATA_PATH / ".analyzer.config")["BROWSER_PATH"]  # type: ignore
     )
