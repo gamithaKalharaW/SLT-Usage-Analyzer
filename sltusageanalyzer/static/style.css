@@ -1,3 +1,10 @@
+:root {
+  --dull-white: #ebfae1;
+  --main-background: #0B2A58;
+  --content-background: #0F3B7A;
+  --progress-background: #3077b4;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -15,7 +22,7 @@ h1 {
 }
 
 table {
-  color: #ebfae1;
+  color: var(--dull-white);
   font-size: 20px;
   text-align: left;
   border-collapse: collapse;
@@ -31,11 +38,11 @@ table {
   gap: 0px 0px; 
   height: 100vh;
   width: 100vw;
-  background: #0B2A58;
+  background: var(--main-background);
 }
 
 .content-frame {
-  background: #0F3B7A;
+  background: var(--content-background);
   padding: 20px;
   margin: 10px;
   border-radius: 10px;
@@ -98,9 +105,7 @@ table {
 }
 
 .usage-progress-bar {
-  /* background: #3CCD6A; */
-  background: #3077b4;
-  /* background: linear-gradient(90deg, #3CCD6A 9%, #3077B4 0%); */
+  background: var(--progress-background);
   border-radius: 10px;
   padding: 10px;
   margin: 10px;
@@ -125,9 +130,7 @@ table {
 }
 
 .total-progress-bar {
-  /* background: #3CCD6A; */
-  background: #3077b4;
-  /* background: linear-gradient(90deg, #3CCD6A 9%, #3077B4 0%); */
+  background: var(--progress-background);
   border-radius: 10px;
   padding: 10px;
   margin: 10px;
@@ -148,7 +151,7 @@ table {
   align-items: center;
   justify-content: center;
 
-  background-image: conic-gradient(#3ccd6a 60deg, #3077b4 0deg);
+  background-image: conic-gradient(#3ccd6a 60deg, var(--progress-background) 0deg);
   height: 240px;
   aspect-ratio: 1 / 1;
   padding: 10px;
@@ -164,7 +167,7 @@ table {
   font-size: 20px;
   color: white;
   font-weight: bold;
-  background: #0F3B7A;
+  background: var(--content-background);
   aspect-ratio: 1 / 1;
   padding: 10px;
   margin: 10px;
@@ -184,11 +187,4 @@ table {
 
 #refresh-font {
   color: #ebfae1;
-}
-
-
-#proto {
-  background: #00ff55;
-  border-radius: 10px;
-  /* height: 100vh; */
 }
