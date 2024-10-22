@@ -46,11 +46,11 @@ def home():
     if not PROCESSED_JSON_PATH.exists():
         logger.debug("Processed json data not found. Saving data...")
         save_processed_data()
-    return total()
+    return summary()
 
 
-@app.route("/total")
-def total():
+@app.route("/summary")
+def summary():
     json_data = get_saved_data(processed_json_path=PROCESSED_JSON_PATH)
     rpt_time = json_data["report_time"]
     total_dt = json_data["total"]
@@ -155,7 +155,7 @@ def refresh():
     logger.info("Updating json data")
     save_processed_data()
     logger.info("Refreshing page")
-    return total()
+    return summary()
 
 
 @app.route("/close", methods=["GET"])  # type: ignore
