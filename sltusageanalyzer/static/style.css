@@ -2,7 +2,6 @@
   margin: 0;
   padding: 0;
 }
-
 :root {
   --background-color: #0B2A58;
   --container-background-color: #0F3B7A;
@@ -10,6 +9,8 @@
   --button-color: #1977D1;
   --button-hover-color: #0056A3;
   --font-color: #eee;
+  --progress-bar-color:#3CCD6A;
+  --progress-bar-background:#3077B4;
 }
 
 body {
@@ -37,8 +38,6 @@ body {
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
-    /* align-items: center; */
-    /* padding: 10px; */
   }
 }
 
@@ -53,7 +52,6 @@ nav {
   border: 2px solid var(--container-border);
   grid-area: navbar;
   display: flex;
-  /* flex-direction: column; */
   align-items: center;
   padding: 10px;
   border-radius: 10px;
@@ -94,3 +92,94 @@ footer {
 .button:hover {
   background-color: var(--button-hover-color);
 }
+
+/*-------- Content pages ---------*/
+
+h1 {
+  color: var(--font-color);
+  font-size: clamp(2rem, 4vw, 3rem);
+  text-align: center;
+  margin: 15px;
+}
+
+.total-container {
+  display: grid;
+}
+@media screen and (max-width: 450px) {
+  .total-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 3fr 1fr 1fr 1fr;
+    grid-template-areas: 
+    "progress-meter"
+    "summary-std"
+    "summary-free"
+    "summary-vas";
+  }
+}
+@media screen and (min-width: 450px) {
+  .total-container {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-areas: 
+    "progress-meter summary-std"
+    "progress-meter summary-free"
+    "progress-meter summary-vas";
+  }
+}
+#summary-std {
+  grid-area: summary-std;
+}
+#summary-free {
+  grid-area: summary-free;
+}
+#summary-vas {
+  grid-area: summary-vas;
+}
+
+.progress-meter {
+  grid-area: progress-meter;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.progress-strip {
+  width: 70%;
+  border-radius: 70%;
+  aspect-ratio: 1;
+  margin: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+}
+.prog-content {
+  width: 80%;
+  border-radius: 80%;
+  aspect-ratio: 1;
+  margin: 5px;
+  background-color: var(--progress-bar-background);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(1rem, 2.5vw, 3rem);
+  color: var(--font-color);
+  font-weight: bold;
+}
+table {
+  color: var(--font-color);
+  font-size: clamp(1rem, 2.5vw, 3rem);
+  border: 2px solid var(--container-border);
+  border-radius: 10px;
+  text-align: left;
+  padding: 5px;
+  margin: 5px;
+  table-layout: fixed;
+  width: 99%;
+
+}
+td, th {
+  text-align: left;
+  padding: 5px;
+  width: 50%;
+}
+
