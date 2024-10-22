@@ -56,28 +56,24 @@ def summary():
     total_dt = json_data["total"]
     std_dt = json_data["standard"]
     free_dt = json_data["free"]
+    vas_dt = json_data["vas"]
 
     total_perc = total_dt["rem_perc"]
-    tot_perc_angle = int(round(360 * (total_perc / 100)))
-
-    stand_used, stand_rem = std_dt["used"], std_dt["remaining"]
-    std_rem_perc = int(round((stand_rem / std_dt["limit"]) * 100))
-
-    free_used, free_rem = free_dt["used"], free_dt["remaining"]
-    free_rem_perc = int(round((free_rem / free_dt["limit"]) * 100))
 
     logger.debug("Rendering total page")
     return render_template(
         "total.html",
         report_time=rpt_time,
-        tot_use_perc=total_perc,
-        tot_use_angle=tot_perc_angle,
-        stand_used=stand_used,
-        stand_rem=stand_rem,
-        stand_use_perc=std_rem_perc,
-        free_used=free_used,
-        free_rem=free_rem,
-        free_use_perc=free_rem_perc,
+        total_perc=total_perc,
+        std_limit=f"{ std_dt["limit"] }GB",
+        free_limit=f"{ free_dt["limit"] }GB",
+        vas_limit=f"{ vas_dt["limit"] }GB",
+        std_rem=std_dt["remaining"],
+        std_rem_perc=std_dt["rem_perc"],
+        free_rem=free_dt["remaining"],
+        free_rem_perc=free_dt["rem_perc"],
+        vas_rem=vas_dt["remaining"],
+        vas_rem_perc=vas_dt["rem_perc"],
     )
 
 
