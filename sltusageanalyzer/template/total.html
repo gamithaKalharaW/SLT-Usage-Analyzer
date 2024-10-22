@@ -1,4 +1,52 @@
 {% extends "base.html" %}
 {% block content %}
 
+<h1>Total Remaining Summary</h1>
+
+<div class="total-container">
+  <div class="progress-meter">
+    <div class="progress-strip" id="progress-strip">
+      <div class="prog-content">
+        <h4 style="text-align: center">{{ total_perc}}% REMAINING</h4>
+      </div>
+    </div>
+  </div>
+
+    <table id="summary-std">
+      <tr>
+        <th colspan="2">Standard({{ std_limit}})</th>
+      </tr>
+      <tr>
+        <td>{{ std_rem }}GB</td>
+        <td>{{ std_rem_perc }}%</td>
+      </tr>
+    </table>
+
+    <table id="summary-free">
+      <tr>
+        <th colspan="2">Free({{ free_limit }})</th>
+      </tr>
+      <tr>
+        <td>{{ free_rem }}GB</td>
+        <td>{{ free_rem_perc }}%</td>
+      </tr>
+    </table>
+
+    <table id="summary-vas">
+      <tr>
+        <th colspan="2">VAS({{ vas_limit }})</th>
+      </tr>
+      <tr>
+        <td>{{ vas_rem }}GB</td>
+        <td>{{ vas_rem_perc }}%</td>
+      </tr>
+    </table>
+
+</div>
+
+<script>
+  const total_perc = "{{ total_perc }}";
+  $('#progress-strip').css("background-image", "conic-gradient(#3CCD6A " + total_perc + "%, #3077B4 0%)");
+</script>
+
 {% endblock %}
