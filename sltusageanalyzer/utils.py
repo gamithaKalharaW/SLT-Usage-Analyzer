@@ -2,6 +2,7 @@ from pathlib import Path
 import hashlib
 import getpass
 import json
+import subprocess
 
 from loguru import logger
 from dotenv import dotenv_values
@@ -45,6 +46,8 @@ def setup_data_folder(
     assets_path,
     script_path,
     script_hash_path,
+    vas_script_path,
+    vas_script_hash_path,
 ):
     if not data_path.exists():
         logger.error("Data folder not found.")
@@ -152,3 +155,86 @@ def setup_data_folder(
             )
         else:
             logger.info("Script file validation successful.")
+
+    if not vas_script_path.exists():
+        logger.info("Creating vas script file...")
+        vas_script_path.touch()
+
+        username = dotenv_values(cfg_path)["USERNAME"]
+        passwd = dotenv_values(cfg_path)["PASSWORD"]
+        id = dotenv_values(cfg_path)["ID"]
+
+        vas_script_path.write_text(
+            format_str(
+                Path(assets_path) / "template.vas_data_script.txt",
+                username=username,
+                password=passwd,
+                subscriberID=id,
+            )
+        )
+
+        vas_script_hash_path.touch()
+        vas_script_hash_path.write_text(
+            hashlib.sha256(vas_script_path.read_bytes()).hexdigest()
+        )
+
+    else:
+        _saved_hash = vas_script_hash_path.read_text().removesuffix("\n")
+        _cfg_hash = hashlib.sha256(vas_script_path.read_bytes()).hexdigest()
+        if _saved_hash != _cfg_hash:
+            logger.error("VAS script file hash mismatch.")
+            if (
+                input("Would you like to reset vas script file?(y/n): ").lower()
+                != "y"
+            ):
+                logger.info("Exiting...")
+                exit(0)
+            logger.info("Removing corrupt script file...")
+            vas_script_path.unlink()
+            logger.info("Creating script file...")
+            vas_script_path.touch()
+            vas_script_path.write_text(
+                format_str(
+                    Path(assets_path) / "template.vas_data_script.txt",
+                    username=dotenv_values(cfg_path)["USERNAME"],
+                    passwd=dotenv_values(cfg_path)["PASSWORD"],
+                    id=dotenv_values(cfg_path)["ID"],
+                )
+            )
+            vas_script_hash_path.touch()
+            vas_script_hash_path.write_text(
+                hashlib.sha256(vas_script_path.read_bytes()).hexdigest()
+            )
+        else:
+            logger.info("VAS script file validation successful.")
+
+
+def fetch_vas_data(vas_script_path, data_path):
+    logger.info("Fetching vas data...")
+    _ = subprocess.run(
+        ["pwsh", "-NoProfile", str(vas_script_path)], cwd=str(data_path)
+    )
+    logger.debug("Completed VAS data fetch.")
+    vas_data_path = data_path / "BBVAS.json"
+
+    with open(vas_data_path, "r") as f:
+        raw_json = json.load(f)
+
+    vas_data = raw_json["dataBundle"]["usageDetails"][0]
+
+    write_json_data = {
+        "vas_name": vas_data["name"],
+        "vas_limit": vas_data["limit"],
+        "vas_used": vas_data["used"],
+        "vas_remaining": vas_data["remaining"],
+        "vas_rem_perc": vas_data["percentage"],
+        "exp_date": vas_data["expiry_date"],
+        "rpt_time": raw_json["dataBundle"]["reported_time"],
+    }
+    with open(data_path / "vas_data.json", "w") as f:
+        json.dump(write_json_data, f)
+
+
+def get_vas_data(data_path):
+    with open(data_path / "vas_data.json", "r") as f:
+        return json.load(f)
