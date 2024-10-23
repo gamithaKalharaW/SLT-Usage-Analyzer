@@ -15,7 +15,12 @@ import json
 import hashlib
 
 
-from sltusageanalyzer.utils import setup_data_folder, get_saved_data
+from sltusageanalyzer.utils import (
+    fetch_vas_data,
+    setup_data_folder,
+    get_saved_data,
+    get_vas_data,
+)
 from sltusageanalyzer.checkhealth import check_health
 from sltusageanalyzer.appserver import server_func
 
@@ -29,10 +34,12 @@ PROCESSED_JSON_PATH = DATA_PATH / "wifi_data.json"
 
 
 CFG_PATH = DATA_PATH / ".analyzer.config"
-SCRIPT_PATH = DATA_PATH / "analyzer_pwsh.ps1"
+MAIN_SCRIPT_PATH = DATA_PATH / "analyzer_pwsh.ps1"
+VAS_SCRIPT_PATH = DATA_PATH / "vas_pwsh.ps1"
 LOG_PATH = DATA_PATH / "analyzer.log"
 CFG_HASH_PATH = DATA_PATH / ".analyzer.config.hash"
-SCRIPT_HASH_PATH = DATA_PATH / "analyzer_pwsh.ps1.hash"
+MAIN_SCRIPT_HASH_PATH = DATA_PATH / "analyzer_pwsh.ps1.hash"
+VAS_SCRIPT_HASH_PATH = DATA_PATH / "vas_pwsh.ps1.hash"
 
 app = Flask(
     __name__,
@@ -127,22 +134,18 @@ def usage(tp):
 
 @app.route("/vas")
 def vas():
-    json_data = get_saved_data(processed_json_path=PROCESSED_JSON_PATH)
-    rpt_time = json_data["report_time"]
-    vas_dt = json_data["vas"]
-    used = vas_dt["used"]
-    remaining = vas_dt["remaining"]
-    rem_percent = vas_dt["rem_perc"]
-    rem_angle = int(round(360 * (rem_percent / 100)))
+    json_data = get_vas_data(data_path=DATA_PATH)
 
     logger.debug("Rendering vas page")
     return render_template(
         "vas.html",
-        report_time=rpt_time,
-        used=used,
-        remaining=remaining,
-        rem_perc=rem_percent,
-        rem_angle=rem_angle,
+        vas_name=json_data["vas_name"],
+        vas_limit=json_data["vas_limit"],
+        used=json_data["vas_used"],
+        rem=json_data["vas_remaining"],
+        total_perc=json_data["vas_rem_perc"],
+        exp_date=json_data["exp_date"],
+        report_time=json_data["rpt_time"],
     )
 
 
@@ -166,7 +169,7 @@ def get_json_data():
         [
             "pwsh",
             "-NoProfile",
-            str(SCRIPT_PATH),
+            str(MAIN_SCRIPT_PATH),
         ],
         cwd=str(DATA_PATH),
     )
@@ -229,6 +232,7 @@ def get_json_data():
 
 def save_processed_data():
     out_data = get_json_data()
+    fetch_vas_data(vas_script_path=VAS_SCRIPT_PATH, data_path=DATA_PATH)
 
     with open(PROCESSED_JSON_PATH, "w") as jf:
         json.dump(out_data, jf)
@@ -301,8 +305,8 @@ def main(
             check_health(
                 cfg_path=CFG_PATH,
                 cfg_hash_path=CFG_HASH_PATH,
-                script_path=SCRIPT_PATH,
-                script_hash_path=SCRIPT_HASH_PATH,
+                script_path=MAIN_SCRIPT_PATH,
+                script_hash_path=MAIN_SCRIPT_HASH_PATH,
             )
         )
 
@@ -325,8 +329,10 @@ def main(
         cfg_path=CFG_PATH,
         cfg_hash_path=CFG_HASH_PATH,
         assets_path=ASSETS_PATH,
-        script_path=SCRIPT_PATH,
-        script_hash_path=SCRIPT_HASH_PATH,
+        script_path=MAIN_SCRIPT_PATH,
+        script_hash_path=MAIN_SCRIPT_HASH_PATH,
+        vas_script_path=VAS_SCRIPT_PATH,
+        vas_script_hash_path=VAS_SCRIPT_HASH_PATH,
     )
     browser_path = Path(
         dotenv_values(DATA_PATH / ".analyzer.config")["BROWSER_PATH"]  # type: ignore
