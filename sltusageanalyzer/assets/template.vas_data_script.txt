@@ -25,7 +25,7 @@ Invoke-WebRequest -UseBasicParsing -Uri "https://omniscapp.slt.lk/mobitelint/slt
 # Save login response to login.json
 
 #INFO: Extract access token from json
-$jsonData = Get-Content "login.json" | ConvertFrom-Json
+$jsonData = Get-Content "vas.login.json" | ConvertFrom-Json
 $tokenValue = $jsonData.accessToken
 
 Invoke-WebRequest -UseBasicParsing -Uri "https://omniscapp.slt.lk/mobitelint/slt/api/BBVAS/GetDashboardVASBundles?subscriberID={{ subscriberID }}" `
