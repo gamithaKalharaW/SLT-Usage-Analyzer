@@ -95,6 +95,7 @@ footer {
 
 /*-------- Content pages ---------*/
 
+/*-------- Summary page ---------*/
 h1 {
   color: var(--font-color);
   font-size: clamp(2rem, 4vw, 3rem);
@@ -183,3 +184,29 @@ td, th {
   width: 50%;
 }
 
+/*-------- VAS page ---------*/
+.vas-container {
+  display: grid;
+  .progress-meter {
+    grid-area: meter;
+  }
+  table {
+    grid-area: table;
+  }
+}
+@media screen and (max-width: 450px) {
+  .vas-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+    grid-template-areas:
+    "meter"
+    "table";
+  }
+}
+@media screen and (min-width: 450px) {
+  .vas-container {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+    "meter table";
+  }
+}
