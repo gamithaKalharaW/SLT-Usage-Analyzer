@@ -17,6 +17,10 @@
             <td>{{ vas_name }}</td>
         </tr>
         <tr>
+            <th>Limit</th>
+            <td>{{ vas_limit }}GB</td>
+        </tr>
+        <tr>
             <th>Used:</th>
             <td>{{ used }}GB</td>
         </tr>
@@ -30,5 +34,10 @@
         </tr>
     </table>
 </div>
+
+<script>
+  let perc = {{ total_perc }};
+  $('#progress-strip').css("background-image", "conic-gradient(#3CCD6A " + perc + "%, #3077B4 0%)");
+</script>
 
 {% endblock %}
