@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sltusageanalyzer"
-version = "0.2.0"
+version = "1.0.0a"
 description = "A desktop webapplication for checking SLT usage build in python."
 authors = ["gamithaKalharaW <136357643+gamithaKalharaW@users.noreply.github.com>"]
 readme = "README.md"
