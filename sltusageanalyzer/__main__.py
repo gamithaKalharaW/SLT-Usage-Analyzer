@@ -289,12 +289,21 @@ def update_config_file():
     default=False,
     help="Fetch new data before app startup",
 )
+@click.option(
+    "--server", "-s", default=None, type=str, help="Run app as web server"
+)
 @click.version_option(IM.version("sltusageanalyzer"))
 def main(
-    debug: bool, port: int, checkhealth: bool, update_config: bool, reload: bool
+    debug: bool,
+    port: int,
+    checkhealth: bool,
+    update_config: bool,
+    reload: bool,
+    server: str | None,
 ):
     logger.remove()
     logger.add(LOG_PATH, level="DEBUG", retention="3 days")
+
     if debug:
         logger.add(sys.stderr, level="DEBUG")
     else:
@@ -309,6 +318,12 @@ def main(
                 script_hash_path=MAIN_SCRIPT_HASH_PATH,
             )
         )
+
+    if server:
+        logger.info("Running app as web server")
+        logger.debug(f"Running on {server}:{port}")
+        server_func(app=app, host=server, port=port)  # type: ignore
+        exit(0)
 
     if update_config:
         logger.info("Updating config file...")
