@@ -20,28 +20,28 @@ A desktop webapplication for checking SLT usage build in python.
 
 #### Installing via `pip`
 
-```python
+```bash
 pip install git+https://github.com/gamithaKalharaW/SLT-Usage-Analyzer
 ```
 The application can be run either as a python module or as an executable script.
 
-```python
+```bash
 python -m sltusageanalyzer
 ```
 *or*
-```python
+```bash
 sltanalyzer
 ```
 
 #### Installing via `pipx`
 
-```python
+```bash
 pipx install git+https://github.com/gamithaKalharaW/SLT-Usage-Analyzer
 ```
 
 The application can be run as an executable script.
 
-```python
+```bash
 sltanalyzer
 ```
 
@@ -52,7 +52,7 @@ sltanalyzer
 #### Packaging from source
 You can also manualy build the wheel file & install it using `poetry`.
 
-```python
+```bash
 git clone https://github.com/gamithaKalharaW/SLT-Usage-Analyzer
 cd SLT-Usage-Analyzer
 poetry build
