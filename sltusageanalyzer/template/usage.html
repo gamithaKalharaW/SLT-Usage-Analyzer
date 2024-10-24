@@ -1,5 +1,46 @@
 {% extends "base.html" %}
 {% block content %}
 
+<h1>{{ tp }} Usage Details ({{ limit }}GB)</h1>
+
+<div class="usage-container">
+
+    <div class="progress-meter">
+        <div class="progress-strip" id="progress-strip">
+            <div class="prog-content">
+                <h4 style="text-align: center">{{ rem_perc }}% REMAINING</h4>
+            </div>
+        </div>
+    </div>
+
+    <table id="table-1">
+        <tr>
+            <th>Used</th>
+            <td>{{ used }}GB</td>
+        </tr>
+        <tr>
+            <th>Remaining</th>
+            <td>{{ remaining }}GB</td>
+        </tr>
+    </table>
+
+    <table id="table-2">
+        <tr>
+            <th>Used average</th>
+            <th>{{ used_avg }}GB</th>
+        </tr>
+        <tr>
+            <th>Remaining average</th>
+            <th>{{ rem_avg }}GB</th>
+        </tr>
+    </table>
+
+</div>
+
+<script>
+  let perc = {{ rem_perc }};
+  $('#progress-strip').css("background-image", "conic-gradient(#3CCD6A " + perc + "%, #3077B4 0%)");
+</script>
+
 {% endblock %}
 

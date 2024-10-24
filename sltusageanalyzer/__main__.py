@@ -1,29 +1,26 @@
+import hashlib
+import importlib.metadata as IM
+import importlib.resources as IR
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import click
+from dotenv import dotenv_values
 from flask import Flask, render_template
 from flaskwebgui import FlaskUI, close_application
 from loguru import logger
-from dotenv import dotenv_values
-import click
 
-
-from pathlib import Path
-import importlib.resources as IR
-import importlib.metadata as IM
-import os
-import sys
-import subprocess
-import json
-import hashlib
-
-
+from sltusageanalyzer.appserver import server_func
+from sltusageanalyzer.checkhealth import check_health
 from sltusageanalyzer.utils import (
     fetch_vas_data,
-    setup_data_folder,
     get_saved_data,
     get_vas_data,
+    setup_data_folder,
 )
-from sltusageanalyzer.checkhealth import check_health
-from sltusageanalyzer.appserver import server_func
-
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
 DATA_PATH = (
@@ -106,14 +103,12 @@ def usage(tp):
 
     used, remaining = usage_dt["used"], usage_dt["remaining"]
     rem_perc = usage_dt["rem_perc"]
-    rem_perc_angle = int(round(360 * (rem_perc / 100)))
 
     used_avg = round(used / day, 1)
-    remaining_avg = round(remaining / (days - day), 1)
-
-    calc_val = round((remaining_avg / (usage_dt["limit"] / days)) * 100)
-    bar_val = int(round(80 * (calc_val / 100)))
-    bar_val = 100 if bar_val > 100 else bar_val
+    if day != days:
+        remaining_avg = round(remaining / (days - day), 1)
+    else:
+        remaining_avg = remaining
 
     logger.debug(f"Rendering {tp.lower()} usage page")
     return render_template(
@@ -121,14 +116,11 @@ def usage(tp):
         tp=tp,
         report_time=rpt_time,
         used=used,
+        limit=usage_dt["limit"],
         remaining=remaining,
         rem_perc=rem_perc,
-        rem_percent=70,
-        rem_angle=rem_perc_angle,
         used_avg=used_avg,
         rem_avg=remaining_avg,
-        calc_val=calc_val,
-        bar_val=bar_val,
     )
 
 

@@ -210,3 +210,35 @@ td, th {
     "meter table";
   }
 }
+
+/* -------- Usage page --------- */
+.usage-container {
+  display: grid;
+  .progress-meter {
+    grid-area: meter;
+  }
+  #table-1 {
+    grid-area: table1;
+  }
+  #table2 {
+    grid-area: table2;
+  }
+}
+@media screen and (max-width: 450px) {
+  .usage-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1.2fr 0.4fr 0.4fr;
+    grid-template-areas:
+    "meter"
+    "table1"
+    "table2";
+  }
+}
+@media screen and (min-width: 450px) {
+  .usage-container {
+    grid-template-columns: 1.1fr 0.9fr;
+    grid-template-areas:
+    "meter table1"
+    "meter table2";
+  }
+}
