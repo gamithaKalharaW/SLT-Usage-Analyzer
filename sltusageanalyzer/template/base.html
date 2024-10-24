@@ -14,7 +14,10 @@
     <a href="{{ url_for('usage', tp='Standard') }}" class="button">Standard</a>
     <a href="{{ url_for('usage', tp='Free') }}" class="button">Free</a>
     <a href="{{ url_for('vas') }}" class="button">VAS</a>
-    <a href="{{ url_for('refresh') }}" class="button" id="refresh">Refresh</a>
+    <a href="{{ url_for('refresh') }}" class="button" id="refresh">
+      <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="#e8eaed"><path d="M204-318q-22-38-33-78t-11-82q0-134 93-228t227-94h7l-64-64 56-56 160 160-160 160-56-56 64-64h-7q-100 0-170 70.5T240-478q0 26 6 51t18 49l-60 60ZM481-40 321-200l160-160 56 56-64 64h7q100 0 170-70.5T720-482q0-26-6-51t-18-49l60-60q22 38 33 78t11 82q0 134-93 228t-227 94h-7l64 64-56 56Z"/></svg>
+      <p id="refresh-text">Refresh</p>
+    </a>
   </nav>
   <main>
     {% block content %}
@@ -22,6 +25,7 @@
   </main>
 
   <footer>
+    <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e8eaed"><path d="M360-816v-72h240v72H360Zm84 432h72v-240h-72v240Zm36 288q-70 0-130.92-26.51-60.92-26.5-106.49-72.08-45.58-45.57-72.08-106.49Q144-362 144-432q0-70 26.51-130.92 26.5-60.92 72.08-106.49 45.57-45.58 106.49-72.08Q410-768 479.56-768q58.28 0 111.86 19.5T691-694l52-51 50 50-51 52q35 45 54.5 98.81T816-431.86q0 69.86-26.51 130.78-26.5 60.92-72.08 106.49-45.57 45.58-106.49 72.08Q550-96 480-96Zm0-72q110 0 187-77t77-187q0-110-77-187t-187-77q-110 0-187 77t-77 187q0 110 77 187t187 77Zm0-264Z"/></svg>
     <p>Report time: {{ report_time }}</p>
   </footer>
 
