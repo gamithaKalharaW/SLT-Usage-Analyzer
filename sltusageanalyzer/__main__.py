@@ -1,21 +1,26 @@
+import hashlib
+import importlib.metadata as IM
+import importlib.resources as IR
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import click
+from dotenv import dotenv_values
 from flask import Flask, render_template
 from flaskwebgui import FlaskUI, close_application
 from loguru import logger
-from dotenv import dotenv_values
-import click
 
-
-from pathlib import Path
-import importlib.resources as IR
-import importlib.metadata as IM
-import os
-import sys
-import getpass
-import subprocess
-import json
-import hashlib
-import requests
-
+from sltusageanalyzer.appserver import server_func
+from sltusageanalyzer.checkhealth import check_health
+from sltusageanalyzer.utils import (
+    fetch_vas_data,
+    get_saved_data,
+    get_vas_data,
+    setup_data_folder,
+)
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
 DATA_PATH = (
@@ -26,10 +31,12 @@ PROCESSED_JSON_PATH = DATA_PATH / "wifi_data.json"
 
 
 CFG_PATH = DATA_PATH / ".analyzer.config"
-SCRIPT_PATH = DATA_PATH / "analyzer_pwsh.ps1"
+MAIN_SCRIPT_PATH = DATA_PATH / "analyzer_pwsh.ps1"
+VAS_SCRIPT_PATH = DATA_PATH / "vas_pwsh.ps1"
 LOG_PATH = DATA_PATH / "analyzer.log"
 CFG_HASH_PATH = DATA_PATH / ".analyzer.config.hash"
-SCRIPT_HASH_PATH = DATA_PATH / "analyzer_pwsh.ps1.hash"
+MAIN_SCRIPT_HASH_PATH = DATA_PATH / "analyzer_pwsh.ps1.hash"
+VAS_SCRIPT_HASH_PATH = DATA_PATH / "vas_pwsh.ps1.hash"
 
 app = Flask(
     __name__,
@@ -43,44 +50,40 @@ def home():
     if not PROCESSED_JSON_PATH.exists():
         logger.debug("Processed json data not found. Saving data...")
         save_processed_data()
-    return total()
+    return summary()
 
 
-@app.route("/total")
-def total():
-    json_data = get_saved_data()
+@app.route("/summary")
+def summary():
+    json_data = get_saved_data(processed_json_path=PROCESSED_JSON_PATH)
     rpt_time = json_data["report_time"]
     total_dt = json_data["total"]
     std_dt = json_data["standard"]
     free_dt = json_data["free"]
+    vas_dt = json_data["vas"]
 
     total_perc = total_dt["rem_perc"]
-    tot_perc_angle = int(round(360 * (total_perc / 100)))
-
-    stand_used, stand_rem = std_dt["used"], std_dt["remaining"]
-    std_rem_perc = int(round((stand_rem / std_dt["limit"]) * 100))
-
-    free_used, free_rem = free_dt["used"], free_dt["remaining"]
-    free_rem_perc = int(round((free_rem / free_dt["limit"]) * 100))
 
     logger.debug("Rendering total page")
     return render_template(
         "total.html",
         report_time=rpt_time,
-        tot_use_perc=total_perc,
-        tot_use_angle=tot_perc_angle,
-        stand_used=stand_used,
-        stand_rem=stand_rem,
-        stand_use_perc=std_rem_perc,
-        free_used=free_used,
-        free_rem=free_rem,
-        free_use_perc=free_rem_perc,
+        total_perc=total_perc,
+        std_limit=f"{ std_dt["limit"] }GB",
+        free_limit=f"{ free_dt["limit"] }GB",
+        vas_limit=f"{ vas_dt["limit"] }GB",
+        std_rem=std_dt["remaining"],
+        std_rem_perc=std_dt["rem_perc"],
+        free_rem=free_dt["remaining"],
+        free_rem_perc=free_dt["rem_perc"],
+        vas_rem=vas_dt["remaining"],
+        vas_rem_perc=vas_dt["rem_perc"],
     )
 
 
 @app.route("/usage/<tp>")
-def usage(tp="total"):
-    json_data = get_saved_data()
+def usage(tp):
+    json_data = get_saved_data(processed_json_path=PROCESSED_JSON_PATH)
     rpt_time = json_data["report_time"]
 
     date_str = rpt_time.split(" ")[0]
@@ -100,14 +103,12 @@ def usage(tp="total"):
 
     used, remaining = usage_dt["used"], usage_dt["remaining"]
     rem_perc = usage_dt["rem_perc"]
-    rem_perc_angle = int(round(360 * (rem_perc / 100)))
 
     used_avg = round(used / day, 1)
-    remaining_avg = round(remaining / (days - day), 1)
-
-    calc_val = round((remaining_avg / (usage_dt["limit"] / days)) * 100)
-    bar_val = int(round(80 * (calc_val / 100)))
-    bar_val = 100 if bar_val > 100 else bar_val
+    if day != days:
+        remaining_avg = round(remaining / (days - day), 1)
+    else:
+        remaining_avg = remaining
 
     logger.debug(f"Rendering {tp.lower()} usage page")
     return render_template(
@@ -115,35 +116,28 @@ def usage(tp="total"):
         tp=tp,
         report_time=rpt_time,
         used=used,
+        limit=usage_dt["limit"],
         remaining=remaining,
         rem_perc=rem_perc,
-        rem_percent=70,
-        rem_angle=rem_perc_angle,
         used_avg=used_avg,
         rem_avg=remaining_avg,
-        calc_val=calc_val,
-        bar_val=bar_val,
     )
 
 
 @app.route("/vas")
 def vas():
-    json_data = get_saved_data()
-    rpt_time = json_data["report_time"]
-    vas_dt = json_data["vas"]
-    used = vas_dt["used"]
-    remaining = vas_dt["remaining"]
-    rem_percent = vas_dt["rem_perc"]
-    rem_angle = int(round(360 * (rem_percent / 100)))
+    json_data = get_vas_data(data_path=DATA_PATH)
 
     logger.debug("Rendering vas page")
     return render_template(
         "vas.html",
-        report_time=rpt_time,
-        used=used,
-        remaining=remaining,
-        rem_perc=rem_percent,
-        rem_angle=rem_angle,
+        vas_name=json_data["vas_name"],
+        vas_limit=json_data["vas_limit"],
+        used=json_data["vas_used"],
+        rem=json_data["vas_remaining"],
+        total_perc=json_data["vas_rem_perc"],
+        exp_date=json_data["exp_date"],
+        report_time=json_data["rpt_time"],
     )
 
 
@@ -152,7 +146,7 @@ def refresh():
     logger.info("Updating json data")
     save_processed_data()
     logger.info("Refreshing page")
-    return total()
+    return summary()
 
 
 @app.route("/close", methods=["GET"])  # type: ignore
@@ -161,137 +155,13 @@ def close():
     close_application()
 
 
-def flask_server(**server_kwargs):
-    app = server_kwargs.pop("app", None)
-    server_kwargs.pop("debug", None)
-
-    try:
-        import waitress
-
-        logger.debug("Starting waitress server")
-        waitress.serve(app, **server_kwargs)
-    except Exception as e:
-        logger.exception(e)
-        logger.error("Running app with flask server")
-        app.run(**server_kwargs)
-
-
-def setup_data_folder():
-    if not DATA_PATH.exists():
-        logger.error("Data folder not found.")
-        logger.info(f"Creating data folder @ {DATA_PATH}")
-        DATA_PATH.mkdir()
-    else:
-        logger.info(f"Data folder found @ {DATA_PATH}")
-
-    if not CFG_PATH.exists():
-        logger.error("Config file not found.")
-        logger.info("Creating config file...")
-
-        CFG_PATH.touch()
-        CFG_PATH.write_text(
-            __format_str(
-                Path(ASSETS_PATH) / "template.config.txt",
-                username=input("Enter username: "),
-                password=getpass.getpass("Enter password: "),
-                id=input("Enter id(94xxxxxxxxx): "),
-            )
-        )
-        CFG_HASH_PATH.touch()
-        CFG_HASH_PATH.write_text(
-            hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-        )
-
-    else:
-        _saved_hash = CFG_HASH_PATH.read_text().removesuffix("\n")
-        _cfg_hash = hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-        if _saved_hash != _cfg_hash:
-            logger.error("Config file hash mismatch.")
-            if (
-                input("Would you like to reset config file?(y/n): ").lower()
-                != "y"
-            ):
-                logger.info("Exiting...")
-                exit(0)
-            logger.info("Removing corrupt config file...")
-            CFG_PATH.unlink()
-            logger.info("Creating config file...")
-            CFG_PATH.touch()
-            CFG_PATH.write_text(
-                __format_str(
-                    Path(ASSETS_PATH) / "template.config.txt",
-                    username=input("Enter username: "),
-                    password=getpass.getpass("Enter password: "),
-                    id=input("Enter id(94xxxxxxxxx): "),
-                )
-            )
-            CFG_HASH_PATH.touch()
-            CFG_HASH_PATH.write_text(
-                hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-            )
-        else:
-            logger.info("Config file validation successful.")
-
-    if not SCRIPT_PATH.exists():
-        logger.info("Creating script file...")
-        SCRIPT_PATH.touch()
-
-        username = dotenv_values(CFG_PATH)["USERNAME"]
-        passwd = dotenv_values(CFG_PATH)["PASSWORD"]
-        id = dotenv_values(CFG_PATH)["ID"]
-
-        SCRIPT_PATH.write_text(
-            __format_str(
-                Path(ASSETS_PATH) / "template.pwsh_script.txt",
-                username=username,
-                password=passwd,
-                subscriberID=id,
-            )
-        )
-
-        SCRIPT_HASH_PATH.touch()
-        SCRIPT_HASH_PATH.write_text(
-            hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
-        )
-
-    else:
-        _saved_hash = SCRIPT_HASH_PATH.read_text().removesuffix("\n")
-        _cfg_hash = hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
-        if _saved_hash != _cfg_hash:
-            logger.error("Script file hash mismatch.")
-            if (
-                input("Would you like to reset script file?(y/n): ").lower()
-                != "y"
-            ):
-                logger.info("Exiting...")
-                exit(0)
-            logger.info("Removing corrupt script file...")
-            SCRIPT_PATH.unlink()
-            logger.info("Creating script file...")
-            SCRIPT_PATH.touch()
-            SCRIPT_PATH.write_text(
-                __format_str(
-                    Path(ASSETS_PATH) / "template.config.txt",
-                    username=dotenv_values(CFG_PATH)["USERNAME"],
-                    passwd=dotenv_values(CFG_PATH)["PASSWORD"],
-                    id=dotenv_values(CFG_PATH)["ID"],
-                )
-            )
-            SCRIPT_HASH_PATH.touch()
-            SCRIPT_HASH_PATH.write_text(
-                hashlib.sha256(SCRIPT_PATH.read_bytes()).hexdigest()
-            )
-        else:
-            logger.info("Script file validation successful.")
-
-
 def get_json_data():
     logger.debug("Started data fetching.")
     _ = subprocess.run(
         [
             "pwsh",
             "-NoProfile",
-            str(SCRIPT_PATH),
+            str(MAIN_SCRIPT_PATH),
         ],
         cwd=str(DATA_PATH),
     )
@@ -354,15 +224,11 @@ def get_json_data():
 
 def save_processed_data():
     out_data = get_json_data()
+    fetch_vas_data(vas_script_path=VAS_SCRIPT_PATH, data_path=DATA_PATH)
 
     with open(PROCESSED_JSON_PATH, "w") as jf:
         json.dump(out_data, jf)
         logger.debug(f"Saving processed json data @ {PROCESSED_JSON_PATH}")
-
-
-def get_saved_data():
-    with open(PROCESSED_JSON_PATH, "r") as f:
-        return json.load(f)
 
 
 def update_config_file():
@@ -382,91 +248,9 @@ def update_config_file():
 
     CFG_PATH.write_text(wrt_str)
     logger.debug("Writing new values to config file")
-    CFG_HASH_PATH.write_text(
-        hashlib.sha256(CFG_PATH.read_bytes()).hexdigest()
-    )
+    CFG_HASH_PATH.write_text(hashlib.sha256(CFG_PATH.read_bytes()).hexdigest())
     logger.debug("Writing new hash to config hash file")
     logger.info("Config file updated.")
-
-
-def check_health():
-    return_code =  0
-
-    if not CFG_PATH.exists():
-        logger.error("Configuration file missing.")
-        return_code += 1
-    else:
-        logger.info("Configuration file found.")
-        logger.debug(f"File attrs: { CFG_PATH.stat() }")
-
-        if __compare_file_hash(CFG_PATH, CFG_HASH_PATH):
-            logger.info("Configuration file hash verified.")
-        else:
-            logger.error("Configuration file hash mismatch.")
-            return_code += 1
-
-    if not SCRIPT_PATH.exists():
-        logger.error("Script file missing.")
-        return_code += 1
-    else:
-        logger.info("Script file found.")
-        logger.debug(f"File attrs: { SCRIPT_PATH.stat() }")
-
-        if __compare_file_hash(SCRIPT_PATH, SCRIPT_HASH_PATH):
-            logger.info("Script file hash verified.")
-        else:
-            logger.error("Script file hash mismatch.")
-            return_code += 1
-
-    try:
-        response = requests.get("https://www.google.com", timeout=5)
-        if response.status_code == 200:
-            logger.info("Internet connection verified.")
-        else:
-            logger.error(f"Received unexpected status code: { response.status_code }")
-            return_code += 1
-
-    except requests.ConnectionError:
-        logger.error("No internet connection.")
-        return_code += 1
-
-    except requests.Timeout:
-        logger.error("The request timed out.")
-        return_code += 1
-
-    except Exception as e:
-        logger.error("Unexpected error")
-        logger.exception(e)
-        return_code += 1
-
-
-    return return_code
-
-
-def __compare_file_hash(filepath:Path, hashpath:Path):
-    target_hash = hashpath.read_text().removesuffix("\n")
-    current_hash = hashlib.sha256(filepath.read_bytes()).hexdigest()
-    return target_hash == current_hash
-
-
-def __format_str(fp: str | Path, **kwargs):
-    template_str: str = ""
-    if isinstance(fp, str):
-        fp = Path(fp)
-    try:
-        template_str = Path(fp).read_text()
-
-    except FileNotFoundError as e:
-        logger.error(e)
-        exit(1)
-    except Exception as e:
-        logger.exception(e)
-        pass
-
-    for k, v in kwargs.items():
-        template_str = template_str.replace(f"{{{{ {k} }}}}", str(v))
-
-    return template_str
 
 
 @click.command()
@@ -476,20 +260,62 @@ def __format_str(fp: str | Path, **kwargs):
 @click.option(
     "--port", "-p", default=3000, type=int, help="Port to run on. Default: 3000"
 )
-@click.option("--checkhealth", "-ch", is_flag=True, default=False, help="Check application health")
-@click.option("--update-config", "-uc", is_flag=True, default=False, help="Update config file")
-@click.option("--reload", "-r", is_flag=True, default=False, help="Fetch new data before app startup")
+@click.option(
+    "--checkhealth",
+    "-ch",
+    is_flag=True,
+    default=False,
+    help="Check application health",
+)
+@click.option(
+    "--update-config",
+    "-uc",
+    is_flag=True,
+    default=False,
+    help="Update config file",
+)
+@click.option(
+    "--reload",
+    "-r",
+    is_flag=True,
+    default=False,
+    help="Fetch new data before app startup",
+)
+@click.option(
+    "--server", "-s", default=None, type=str, help="Run app as web server"
+)
 @click.version_option(IM.version("sltusageanalyzer"))
-def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload: bool):
+def main(
+    debug: bool,
+    port: int,
+    checkhealth: bool,
+    update_config: bool,
+    reload: bool,
+    server: str | None,
+):
     logger.remove()
     logger.add(LOG_PATH, level="DEBUG", retention="3 days")
+
     if debug:
         logger.add(sys.stderr, level="DEBUG")
     else:
         logger.add(sys.stderr, level="INFO")
-    
+
     if checkhealth:
-        exit( check_health() )
+        exit(
+            check_health(
+                cfg_path=CFG_PATH,
+                cfg_hash_path=CFG_HASH_PATH,
+                script_path=MAIN_SCRIPT_PATH,
+                script_hash_path=MAIN_SCRIPT_HASH_PATH,
+            )
+        )
+
+    if server:
+        logger.info("Running app as web server")
+        logger.debug(f"Running on {server}:{port}")
+        server_func(app=app, host=server, port=port)  # type: ignore
+        exit(0)
 
     if update_config:
         logger.info("Updating config file...")
@@ -505,7 +331,16 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload:
         logger.info("Reloading data...")
         save_processed_data()
 
-    setup_data_folder()
+    setup_data_folder(
+        data_path=DATA_PATH,
+        cfg_path=CFG_PATH,
+        cfg_hash_path=CFG_HASH_PATH,
+        assets_path=ASSETS_PATH,
+        script_path=MAIN_SCRIPT_PATH,
+        script_hash_path=MAIN_SCRIPT_HASH_PATH,
+        vas_script_path=VAS_SCRIPT_PATH,
+        vas_script_hash_path=VAS_SCRIPT_HASH_PATH,
+    )
     browser_path = Path(
         dotenv_values(DATA_PATH / ".analyzer.config")["BROWSER_PATH"]  # type: ignore
     )
@@ -515,7 +350,7 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload:
         )
         UI = FlaskUI(
             app=app,
-            server=flask_server,  # type: ignore
+            server=server_func,  # type: ignore
             server_kwargs={
                 "app": app,
                 "port": port,
@@ -530,7 +365,7 @@ def main(debug: bool, port: int, checkhealth: bool, update_config: bool, reload:
         logger.debug(f"Using browser @ {browser_path}")
         UI = FlaskUI(
             app=app,
-            server=flask_server,  # type: ignore
+            server=server_func,  # type: ignore
             server_kwargs={
                 "app": app,
                 "port": port,

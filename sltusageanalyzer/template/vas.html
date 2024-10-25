@@ -1,36 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>VAS Usage Details</h1>
+<h1>VAS Summary</h1>
+
 <div class="vas-container">
-  <div class="progress-container">
-    <div class="progress-strip" id="vas-progress-strip">
-      <div class="progress-label">
-        <p id="vas-prog-lbl">{{ rem_perc }}% Remaining</p>
-      </div>
+    <div class="progress-meter">
+        <div class="progress-strip" id="progress-strip">
+            <div class="prog-content">
+                <h4 style="text-align: center">{{ total_perc }}% REMAINING</h4>
+            </div>
+        </div>
     </div>
-  </div>
-  <div>
     <table>
-      <tr>
-        <th>Used</th>
-        <th>Remaining</th>
-      </tr>
-      <tr>
-        <td>{{ used }}GB</td>
-        <td>{{ remaining }}GB</td>
-      </tr>
+        <tr>
+            <th>Service name:</th>
+            <td>{{ vas_name }}</td>
+        </tr>
+        <tr>
+            <th>Limit</th>
+            <td>{{ vas_limit }}GB</td>
+        </tr>
+        <tr>
+            <th>Used:</th>
+            <td>{{ used }}GB</td>
+        </tr>
+        <tr>
+            <th>Remaining:</th>
+            <td>{{ rem }}GB</td>
+        </tr>
+        <tr>
+            <th>Exp. data:</th>
+            <td>{{ exp_date }}</td>
+        </tr>
     </table>
-  </div>
 </div>
+
 <script>
-  /*
-  Sources: 
-    - https://www.w3schools.com/jquery/jquery_syntax.asp
-    - https://stackoverflow.com/questions/35180190/how-to-dynamically-modify-css-using-python
-  */
-  let rem_perc = {{ rem_angle }};
-  $("#vas-progress-strip").css("background-image", "conic-gradient(#3ccd6a " + rem_perc + "deg, #3077b4 0deg)");
+  let perc = {{ total_perc }};
+  $('#progress-strip').css("background-image", "conic-gradient(#3CCD6A " + perc + "%, #3077B4 0%)");
 </script>
 
 {% endblock %}

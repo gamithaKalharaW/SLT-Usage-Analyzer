@@ -1,0 +1,48 @@
+$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$session.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+Invoke-WebRequest -UseBasicParsing -Uri "https://omniscapp.slt.lk/mobitelint/slt/api/Account/Login" `
+-Method "POST" `
+-WebSession $session `
+-Headers @{
+"Accept"="application/json, text/plain, */*"
+  "Accept-Encoding"="gzip, deflate, br, zstd"
+  "Accept-Language"="en-US,en;q=0.9,si-LK;q=0.8,si;q=0.7"
+  "DNT"="1"
+  "Origin"="https://myslt.slt.lk"
+  "Referer"="https://myslt.slt.lk/"
+  "Sec-Fetch-Dest"="empty"
+  "Sec-Fetch-Mode"="cors"
+  "Sec-Fetch-Site"="same-site"
+  "X-IBM-Client-Id"="41aed706-8fdf-4b1e-883e-91e44d7f379b"
+  "sec-ch-ua"="`"Not/A)Brand`";v=`"8`", `"Chromium`";v=`"126`""
+  "sec-ch-ua-mobile"="?0"
+  "sec-ch-ua-platform"="`"Windows`""
+  "sec-gpc"="1"
+} `
+-ContentType "application/x-www-form-urlencoded" `
+-Body "username={{ username }}&password={{ password }}&channelID=WEB" `
+-OutFile "vas.login.json"
+# Save login response to login.json
+
+#INFO: Extract access token from json
+$jsonData = Get-Content "vas.login.json" | ConvertFrom-Json
+$tokenValue = $jsonData.accessToken
+
+Invoke-WebRequest -UseBasicParsing -Uri "https://omniscapp.slt.lk/mobitelint/slt/api/BBVAS/GetDashboardVASBundles?subscriberID={{ subscriberID }}" `
+-UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0" `
+-WebSession $session `
+-Headers @{
+"Accept" = "application/json, text/plain, */*"
+  "Accept-Language" = "en-US,en;q=0.5"
+  "Accept-Encoding" = "gzip, deflate, br, zstd"
+  "Authorization" = "bearer $tokenValue"
+  "X-IBM-Client-Id" = "41aed706-8fdf-4b1e-883e-91e44d7f379b"
+  "Origin" = "https://myslt.slt.lk"
+  "Sec-GPC" = "1"
+  "Referer" = "https://myslt.slt.lk/"
+  "Sec-Fetch-Dest" = "empty"
+  "Sec-Fetch-Mode" = "cors"
+  "Sec-Fetch-Site" = "same-site"
+  "Priority" = "u=0"
+} `
+-OutFile "BBVAS.json"
