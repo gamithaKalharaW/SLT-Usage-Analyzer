@@ -20,6 +20,7 @@ from sltusageanalyzer.utils import (
     get_saved_data,
     get_vas_data,
     setup_data_folder,
+    vas_remaining_days,
 )
 
 ASSETS_PATH = f'{ IR.files("sltusageanalyzer") }/assets'
@@ -105,10 +106,7 @@ def usage(tp):
     rem_perc = usage_dt["rem_perc"]
 
     used_avg = round(used / day, 1)
-    if day != days:
-        remaining_avg = round(remaining / (days - day), 1)
-    else:
-        remaining_avg = remaining
+    remaining_avg = round(remaining / (days - day + 1), 1)
 
     logger.debug(f"Rendering {tp.lower()} usage page")
     return render_template(
@@ -127,6 +125,7 @@ def usage(tp):
 @app.route("/vas")
 def vas():
     json_data = get_vas_data(data_path=DATA_PATH)
+    remaining_days = vas_remaining_days(json_data["exp_date"])
 
     logger.debug("Rendering vas page")
     return render_template(
@@ -137,6 +136,7 @@ def vas():
         rem=json_data["vas_remaining"],
         total_perc=json_data["vas_rem_perc"],
         exp_date=json_data["exp_date"],
+        remaining_days=remaining_days,
         report_time=json_data["rpt_time"],
     )
 

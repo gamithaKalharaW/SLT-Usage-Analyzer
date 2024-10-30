@@ -238,3 +238,29 @@ def fetch_vas_data(vas_script_path, data_path):
 def get_vas_data(data_path):
     with open(data_path / "vas_data.json", "r") as f:
         return json.load(f)
+
+
+def vas_remaining_days(json_date: str):
+    import datetime
+
+    _months = {
+        "Jan": 1,
+        "Feb": 2,
+        "Mar": 3,
+        "Apr": 4,
+        "May": 5,
+        "Jun": 6,
+        "Jul": 7,
+        "Aug": 8,
+        "Sep": 9,
+        "Oct": 10,
+        "Nov": 11,
+        "Dec": 12,
+    }
+    _data = json_date.split("-")
+    date = int(_data[0])
+    month = _months[_data[1]]
+    today = datetime.datetime.now()
+    return abs(
+        (today - datetime.datetime(year=today.year, month=month, day=date)).days
+    )
